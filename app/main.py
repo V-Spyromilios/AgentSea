@@ -3,12 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from x402.http.constants import PAYMENT_REQUIRED_HEADER, PAYMENT_RESPONSE_HEADER
 
 from app.core.config import get_settings
+from app.features.agent_actions.router import router as agent_actions_router
 from app.core.errors import register_exception_handlers
 from app.features.commerce.router import router as commerce_router
 from app.features.commerce.x402_eta_risk_middleware import attach_eta_risk_x402_middleware
 from app.features.departure_verification.router import router as departure_verification_router
 from app.features.eta_risk.router import router as eta_risk_router
 from app.features.health.router import router as health_router
+from app.features.message_extraction.router import router as message_extraction_router
 from app.features.port_congestion.router import router as port_congestion_router
 from app.features.vessel_status.router import router as vessel_status_router
 from app.shared.responses import APIMetadataResponse
@@ -88,6 +90,8 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(commerce_router)
+    app.include_router(agent_actions_router)
+    app.include_router(message_extraction_router)
     app.include_router(vessel_status_router)
     app.include_router(eta_risk_router)
     app.include_router(port_congestion_router)

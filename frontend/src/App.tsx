@@ -2,13 +2,25 @@ import { useEffect, useMemo, useState } from "react";
 
 const API_BASE_URL =
   import.meta.env.VITE_AGENTSEA_API_BASE_URL ?? "http://127.0.0.1:8000";
-const ETA_RISK_PATH =
-  "/v1/vessels/9321483/eta-risk?promised_eta=2026-06-09";
-const ETA_RISK_URL = `${API_BASE_URL}${ETA_RISK_PATH}`;
 const DEMO_PAYMENT_URL = `${API_BASE_URL}/v1/commerce/demo/pay-eta-risk`;
+const WAREHOUSE_DRAFT_URL = `${API_BASE_URL}/v1/agent-actions/warehouse-email-draft`;
+const MESSAGE_EXTRACTION_URL = `${API_BASE_URL}/v1/message-extraction/supplier-claim`;
 const ALGOD_TESTNET_CAIP2 = "algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=";
 const TESTNET_USDC_ASSET_ID = "10458941";
 const WHITELIST_STORAGE_KEY = "marineagent_x402_whitelisted";
+const HAMBURG_CARGO_COMPANY = "Hamburg Cargo";
+const HAMBURG_WAREHOUSE_NAME = "Hamburg North Warehouse";
+const HAMBURG_VESSEL_NAME = "Hamburg Trader";
+const DEFAULT_IMO = "9321483";
+const DEFAULT_ROUTE_CONTEXT = "Asia → Hamburg";
+const DEFAULT_PROMISED_ETA = "2026-06-09";
+const DEFAULT_EXPORTER_MESSAGE = `Hi Hamburg Cargo team,
+
+Hamburg Trader is still expected to arrive in Hamburg by 2026-06-09.
+Please keep the warehouse slot ready.
+
+IMO: 9321483
+Route: Asia to Hamburg`;
 
 type RiskLevel = "low" | "medium" | "high";
 
@@ -112,6 +124,74 @@ type DemoPaymentResponse = {
   debug_evidence?: DemoPaymentDebugEvidence | null;
 };
 
+type SupplierClaim = {
+  vesselImo: string;
+  routeContext: string;
+  supplierPromisedEta: string;
+  claimSummary: string;
+  confidence: number;
+  evidence: {
+    source: string;
+    summary: string;
+  }[];
+};
+
+type SupplierClaimExtractionResponse = {
+  vessel_imo: string;
+  route_context: string;
+  supplier_promised_eta: string;
+  claim_summary: string;
+  confidence: number;
+  evidence: {
+    source: string;
+    summary: string;
+  }[];
+};
+
+type ExporterMessageForm = {
+  vesselImo: string;
+  routeContext: string;
+  message: string;
+};
+
+type AgentActionEvidence = {
+  source: string;
+  summary: string;
+};
+
+type WarehouseEmailDraftResponse = {
+  action_id: string;
+  action_type: "warehouse_email_draft";
+  status: "requires_approval";
+  recipient_role: "warehouse";
+  recipient_name: string;
+  subject: string;
+  body: string;
+  approval_required: boolean;
+  send_status: "not_sent";
+  evidence: AgentActionEvidence[];
+};
+
+type AgentActionApprovalResponse = {
+  action_id: string;
+  status: "approved";
+  send_status: "not_sent";
+  approval_note: string;
+  approved_by: string;
+};
+
+type DraftActionState =
+  | { kind: "idle" }
+  | { kind: "drafting" }
+  | { kind: "ready"; draft: WarehouseEmailDraftResponse }
+  | {
+      kind: "approved";
+      draft: WarehouseEmailDraftResponse;
+      approval: AgentActionApprovalResponse;
+    }
+  | { kind: "rejected"; draft: WarehouseEmailDraftResponse }
+  | { kind: "error"; message: string };
+
 type FetchState =
   | { kind: "idle" }
   | { kind: "loading" }
@@ -145,6 +225,7 @@ type FetchState =
       rawSettleHeaderValue: string | null;
       settleResponse: SettleResponse | null;
       demoPayment: DemoPaymentResponse | null;
+      paymentRequired: PaymentRequired | null;
     }
   | {
       kind: "demo";
@@ -214,6 +295,52 @@ function decodePaymentResponse(headerValue: string | null): SettleResponse | nul
 
 function formatConfidence(confidence: number): string {
   return `${Math.round(confidence * 100)}%`;
+}
+
+function buildEtaRiskUrl(claim: SupplierClaim): string {
+  const params = new URLSearchParams({
+    promised_eta: claim.supplierPromisedEta,
+  });
+  return `${API_BASE_URL}/v1/vessels/${claim.vesselImo}/eta-risk?${params.toString()}`;
+}
+
+function defaultSupplierClaim(): SupplierClaim {
+  return {
+    vesselImo: DEFAULT_IMO,
+    routeContext: DEFAULT_ROUTE_CONTEXT,
+    supplierPromisedEta: DEFAULT_PROMISED_ETA,
+    claimSummary: `Supplier claims the vessel will arrive by ${DEFAULT_PROMISED_ETA}.`,
+    confidence: 0.9,
+    evidence: [
+      {
+        source: "exporter-message",
+        summary: `Message states expected arrival by ${DEFAULT_PROMISED_ETA}.`,
+      },
+    ],
+  };
+}
+
+function buildDemoPreviewResult(claim: SupplierClaim): IntelligenceResponse {
+  const promised = new Date(claim.supplierPromisedEta);
+  const realistic = new Date(promised);
+  realistic.setDate(realistic.getDate() + 3);
+
+  return {
+    ...demoResult,
+    imo: claim.vesselImo,
+    promised_eta: claim.supplierPromisedEta,
+    realistic_eta: realistic.toISOString().slice(0, 10),
+    evidence: [
+      {
+        source: "mock-ais",
+        statement: "Promised ETA differs from the realistic ETA by 3 day(s).",
+      },
+      {
+        source: "route-context",
+        statement: `${claim.routeContext} schedule slack is limited for this vessel call.`,
+      },
+    ],
+  };
 }
 
 function formatNetwork(network: string, genesisId?: string): string {
@@ -333,6 +460,20 @@ function buildRecommendation(result: IntelligenceResponse): string {
   return "ETA risk looks low. Keep the current inbound plan and continue normal monitoring.";
 }
 
+function buildWarehouseAction(result: IntelligenceResponse): string {
+  const delayDays = getDelayDays(result);
+
+  if (result.risk_level === "high") {
+    return `Notify the warehouse about the likely ${delayDays}-day delay and prepare a fallback receiving slot.`;
+  }
+
+  if (result.risk_level === "medium") {
+    return "Alert the warehouse to hold a contingency receiving slot until the ETA is reconfirmed.";
+  }
+
+  return "Keep the warehouse informed and maintain a flexible receiving slot while normal monitoring continues.";
+}
+
 function loadWhitelistPreference(): boolean {
   if (typeof window === "undefined") {
     return false;
@@ -342,6 +483,7 @@ function loadWhitelistPreference(): boolean {
 
 function paymentRequirementMatchesDemoPolicy(
   paymentRequired: PaymentRequired | null,
+  currentEtaRiskUrl: string,
 ): { allowed: boolean; reason: string | null } {
   const accepted = paymentRequired?.accepts?.[0];
   const resourceUrl = paymentRequired?.resource?.url ?? "";
@@ -381,7 +523,7 @@ function paymentRequirementMatchesDemoPolicy(
     };
   }
 
-  if (!ETA_RISK_URL.includes("/v1/vessels/9321483/eta-risk")) {
+  if (!currentEtaRiskUrl.includes("/v1/vessels/9321483/eta-risk")) {
     return {
       allowed: false,
       reason: "Auto-payment blocked because the requested resource did not match the ETA risk demo policy.",
@@ -420,10 +562,20 @@ async function parseErrorMessage(response: Response): Promise<string> {
 
 function App() {
   const [state, setState] = useState<FetchState>({ kind: "idle" });
+  const [exporterMessage, setExporterMessage] = useState<ExporterMessageForm>({
+    vesselImo: DEFAULT_IMO,
+    routeContext: DEFAULT_ROUTE_CONTEXT,
+    message: DEFAULT_EXPORTER_MESSAGE,
+  });
+  const [supplierClaim, setSupplierClaim] = useState<SupplierClaim | null>(null);
+  const [isExtractingClaim, setIsExtractingClaim] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
   const [isWhitelisted, setIsWhitelisted] = useState<boolean>(() =>
     loadWhitelistPreference(),
   );
   const [autoPayMessage, setAutoPayMessage] = useState<string | null>(null);
+  const [draftState, setDraftState] = useState<DraftActionState>({ kind: "idle" });
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [manualEvidence, setManualEvidence] = useState<ManualEvidence>({
     payerAddress: "",
     transactionId: "",
@@ -449,6 +601,11 @@ function App() {
     }
     return null;
   }, [state]);
+  const hasExtractedClaim = supplierClaim !== null;
+  const etaRiskUrl = useMemo(
+    () => (supplierClaim ? buildEtaRiskUrl(supplierClaim) : ""),
+    [supplierClaim],
+  );
 
   const paymentRequired =
     state.kind === "unpaid" ||
@@ -483,6 +640,8 @@ function App() {
     state.kind === "live" ? state.rawSettleHeaderValue : null;
   const liveDemoPayment =
     state.kind === "live" ? state.demoPayment : null;
+  const livePaymentRequired =
+    state.kind === "live" ? state.paymentRequired : null;
 
   async function attemptDemoPayment(
     checkpoint: Extract<
@@ -509,7 +668,7 @@ function App() {
           Accept: "application/json",
         },
         body: JSON.stringify({
-          resource_url: ETA_RISK_URL,
+          resource_url: etaRiskUrl,
           mode,
         }),
       });
@@ -527,7 +686,7 @@ function App() {
             paid: false,
             status_code: response.status,
             payer_address: null,
-            resource_url: ETA_RISK_URL,
+            resource_url: etaRiskUrl,
             mode,
             intelligence: null,
             error: message,
@@ -569,6 +728,7 @@ function App() {
         rawSettleHeaderValue: settleHeader,
         settleResponse: decodePaymentResponse(settleHeader),
         demoPayment: result,
+        paymentRequired: checkpoint.paymentRequired,
       });
     } catch (error) {
       const message =
@@ -584,7 +744,7 @@ function App() {
           paid: false,
           status_code: 500,
           payer_address: null,
-          resource_url: ETA_RISK_URL,
+          resource_url: etaRiskUrl,
           mode,
           intelligence: null,
           error: message,
@@ -606,10 +766,15 @@ function App() {
 
   async function handleBuyIntelligence() {
     setAutoPayMessage(null);
+    setManualEvidence((current) => ({
+      ...current,
+      paymentErrorMessage: "",
+    }));
+    resetActionDraftState();
     setState({ kind: "loading" });
 
     try {
-      const response = await fetch(ETA_RISK_URL, {
+      const response = await fetch(etaRiskUrl, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -630,6 +795,7 @@ function App() {
         if (isWhitelisted) {
           const policyCheck = paymentRequirementMatchesDemoPolicy(
             unpaidState.paymentRequired,
+            etaRiskUrl,
           );
           if (!policyCheck.allowed) {
             setAutoPayMessage(policyCheck.reason);
@@ -660,6 +826,7 @@ function App() {
         rawSettleHeaderValue: settleHeader,
         settleResponse: decodePaymentResponse(settleHeader),
         demoPayment: null,
+        paymentRequired: null,
       });
     } catch (error) {
       const message =
@@ -683,7 +850,68 @@ function App() {
     setAutoPayMessage("MarineAgent whitelist removed for this browser session.");
   }
 
+  function handleExporterFieldChange(
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) {
+    const { name, value } = event.target;
+    setExporterMessage((current) => ({
+      ...current,
+      [name]: value,
+    }));
+    setExtractionError(null);
+    if (supplierClaim) {
+      setSupplierClaim(null);
+      resetDownstreamState();
+    }
+  }
+
+  async function handleExtractSupplierClaim() {
+    setIsExtractingClaim(true);
+    setExtractionError(null);
+
+    try {
+      const response = await fetch(MESSAGE_EXTRACTION_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          imo_hint: exporterMessage.vesselImo,
+          route_hint: exporterMessage.routeContext,
+          message: exporterMessage.message,
+        }),
+      });
+
+      if (!response.ok) {
+        const message = await parseErrorMessage(response);
+        setExtractionError(message);
+        return;
+      }
+
+      const extracted = (await response.json()) as SupplierClaimExtractionResponse;
+      setSupplierClaim({
+        vesselImo: extracted.vessel_imo,
+        routeContext: extracted.route_context,
+        supplierPromisedEta: extracted.supplier_promised_eta,
+        claimSummary: extracted.claim_summary,
+        confidence: extracted.confidence,
+        evidence: extracted.evidence,
+      });
+      resetDownstreamState();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown extraction error";
+      setExtractionError(message);
+    } finally {
+      setIsExtractingClaim(false);
+    }
+  }
+
   async function handleConfirmPayment() {
+    if (!hasExtractedClaim) {
+      return;
+    }
     if (
       state.kind !== "unpaid" &&
       state.kind !== "payment_failed" &&
@@ -728,9 +956,13 @@ function App() {
   }
 
   function handleShowDemoResult() {
+    if (!supplierClaim) {
+      return;
+    }
+    resetActionDraftState();
     setState({
       kind: "demo",
-      result: demoResult,
+      result: buildDemoPreviewResult(supplierClaim),
       statusCode:
         state.kind === "unpaid" ||
         state.kind === "paying" ||
@@ -751,6 +983,112 @@ function App() {
           : null,
       paymentRequired,
     });
+  }
+
+  async function handleDraftWarehouseEmail() {
+    if (!currentResult || delayDays === null || !warehouseRecommendation) {
+      return;
+    }
+
+    setDraftState({ kind: "drafting" });
+    setCopyMessage(null);
+
+    try {
+      const response = await fetch(WAREHOUSE_DRAFT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          company_name: HAMBURG_CARGO_COMPANY,
+          warehouse_name: HAMBURG_WAREHOUSE_NAME,
+          vessel_name: HAMBURG_VESSEL_NAME,
+          imo: currentResult.imo,
+          supplier_promised_eta: currentResult.promised_eta,
+          realistic_eta: currentResult.realistic_eta,
+          delay_days: delayDays,
+          risk_level: currentResult.risk_level,
+          recommendation: warehouseRecommendation,
+        }),
+      });
+
+      if (!response.ok) {
+        const message = await parseErrorMessage(response);
+        setDraftState({ kind: "error", message });
+        return;
+      }
+
+      const draft = (await response.json()) as WarehouseEmailDraftResponse;
+      setDraftState({ kind: "ready", draft });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown draft generation error";
+      setDraftState({ kind: "error", message });
+    }
+  }
+
+  async function handleApproveDraft() {
+    if (!currentDraft) {
+      return;
+    }
+
+    setCopyMessage(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/v1/agent-actions/${currentDraft.action_id}/approve`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            approved_by: "Hamburg Cargo operator",
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const message = await parseErrorMessage(response);
+        setDraftState({ kind: "error", message });
+        return;
+      }
+
+      const approval = (await response.json()) as AgentActionApprovalResponse;
+      setDraftState({ kind: "approved", draft: currentDraft, approval });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown approval error";
+      setDraftState({ kind: "error", message });
+    }
+  }
+
+  async function handleCopyEmail() {
+    if (!currentDraft) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        `Subject: ${currentDraft.subject}\n\n${currentDraft.body}`,
+      );
+      setCopyMessage("Email copied. Send manually from your email client.");
+    } catch {
+      setCopyMessage(
+        "Copy failed in this browser. Select the draft text and copy it manually.",
+      );
+    }
+  }
+
+  function handleRejectDraft() {
+    if (!currentDraft) {
+      return;
+    }
+
+    setDraftState({ kind: "rejected", draft: currentDraft });
+    setCopyMessage(null);
   }
 
   const recommendation = currentResult ? buildRecommendation(currentResult) : null;
@@ -782,6 +1120,10 @@ function App() {
   const hasManualFailure = manualFailureMessage !== null;
   const hasManualSettlement =
     !hasManualFailure && (manualTransactionId !== null || manualLoraUrl !== null);
+  const hasActiveRequestContext =
+    state.kind !== "idle" && state.kind !== "loading";
+  const showManualFailureState = hasActiveRequestContext && hasManualFailure;
+  const showManualSettlementState = hasActiveRequestContext && hasManualSettlement;
   const hasLiveSettlement =
     !liveDemoPayment &&
     liveSettlement?.success === true &&
@@ -798,13 +1140,68 @@ function App() {
           ? failedDebugEvidence.decoded_retry_payment_required.reason
           : null;
   const canShowDemoPreview =
-    liveCheckpointReached || hasManualFailure || hasManualSettlement;
+    liveCheckpointReached || showManualFailureState || showManualSettlementState;
   const effectivePayerAddress =
     manualPayerAddress ??
     failedPayment?.payer_address ??
     liveDemoPayment?.payer_address ??
     liveSettlement?.payer ??
     "OBTH43...H4IJA";
+  const paymentStateAccept =
+    displayedAccept ?? livePaymentRequired?.accepts?.[0] ?? null;
+  const paymentStateHumanAmount = paymentStateAccept
+    ? formatAmount(
+        paymentStateAccept.amount,
+        paymentStateAccept.extra?.decimals,
+        paymentStateAccept.asset,
+      )
+    : "0.02";
+  const paymentStateAssetCode = formatAssetCode(
+    paymentStateAccept?.asset ?? TESTNET_USDC_ASSET_ID,
+  );
+  const paymentStateAssetName = formatAssetName(
+    paymentStateAccept?.asset ?? TESTNET_USDC_ASSET_ID,
+  );
+  const paymentStateReceiver = shortenAddress(paymentStateAccept?.payTo);
+  const supplierEvidence = supplierClaim?.evidence[0]?.summary ?? null;
+  const warehouseRecommendation = currentResult
+    ? buildWarehouseAction(currentResult)
+    : null;
+  const canDraftWarehouseEmail =
+    state.kind === "live" &&
+    !!currentResult &&
+    (Boolean(liveDemoPayment?.paid) || hasLiveSettlement);
+  const currentDraft =
+    draftState.kind === "ready" ||
+    draftState.kind === "approved" ||
+    draftState.kind === "rejected"
+      ? draftState.draft
+      : null;
+
+  useEffect(() => {
+    if (!canDraftWarehouseEmail) {
+      setDraftState({ kind: "idle" });
+      setCopyMessage(null);
+    }
+  }, [canDraftWarehouseEmail]);
+
+  function resetActionDraftState() {
+    setDraftState({ kind: "idle" });
+    setCopyMessage(null);
+  }
+
+  function resetDownstreamState() {
+    setAutoPayMessage(null);
+    setState({ kind: "idle" });
+    setManualEvidence({
+      payerAddress: "",
+      transactionId: "",
+      settlementGroupId: "",
+      loraUrl: "",
+      paymentErrorMessage: "",
+    });
+    resetActionDraftState();
+  }
 
   return (
     <main className="page-shell">
@@ -822,33 +1219,109 @@ function App() {
       <section className="card-grid">
         <article className="card spotlight">
           <div className="card-header">
-            <span className="section-tag">1. Supplier Claim</span>
-            <span className="status-pill neutral">Inbound Shipment</span>
+            <span className="section-tag">1. Exporter Message</span>
+            <span className="status-pill neutral">Inbound Message</span>
           </div>
-          <h2>Asia → Hamburg container move</h2>
-          <dl className="data-list">
-            <div>
-              <dt>Vessel IMO</dt>
-              <dd>9321483</dd>
+          <h2>Supplier update received</h2>
+          <div className="manual-grid">
+            <label className="manual-field">
+              <span>Vessel IMO</span>
+              <input
+                className="manual-input"
+                name="vesselImo"
+                value={exporterMessage.vesselImo}
+                onChange={handleExporterFieldChange}
+              />
+            </label>
+            <label className="manual-field">
+              <span>Route context</span>
+              <input
+                className="manual-input"
+                name="routeContext"
+                value={exporterMessage.routeContext}
+                onChange={handleExporterFieldChange}
+              />
+            </label>
+          </div>
+          <label className="manual-field">
+            <span>Exporter message</span>
+            <textarea
+              className="manual-input manual-textarea"
+              name="message"
+              value={exporterMessage.message}
+              onChange={handleExporterFieldChange}
+              rows={8}
+            />
+          </label>
+          <button
+            className="secondary-button"
+            onClick={handleExtractSupplierClaim}
+            type="button"
+            disabled={isExtractingClaim}
+          >
+            {isExtractingClaim
+              ? "MarineAgent is extracting the supplier claim..."
+              : "Extract supplier claim"}
+          </button>
+          <p className="muted extractor-note">
+            Extraction mode: deterministic demo parser.
+          </p>
+          {extractionError && <p className="error-copy">{extractionError}</p>}
+        </article>
+
+        <article className="card spotlight">
+          <div className="card-header">
+            <span className="section-tag">2. Supplier Claim</span>
+            <span className={`status-pill ${hasExtractedClaim ? "neutral" : "neutral"}`}>
+              {hasExtractedClaim ? "Structured Claim" : "Awaiting Extraction"}
+            </span>
+          </div>
+          {supplierClaim ? (
+            <>
+              <h2>{supplierClaim.routeContext} container move</h2>
+              <dl className="data-list">
+                <div>
+                  <dt>Vessel IMO</dt>
+                  <dd>{supplierClaim.vesselImo}</dd>
+                </div>
+                <div>
+                  <dt>Supplier promised ETA</dt>
+                  <dd>{supplierClaim.supplierPromisedEta}</dd>
+                </div>
+                <div>
+                  <dt>Route context</dt>
+                  <dd>{supplierClaim.routeContext}</dd>
+                </div>
+                <div>
+                  <dt>Claim</dt>
+                  <dd>{supplierClaim.claimSummary}</dd>
+                </div>
+              </dl>
+              {supplierEvidence && (
+                <details className="protocol-evidence extraction-evidence">
+                  <summary>Extraction evidence</summary>
+                  <ul className="detail-list evidence-list-compact">
+                    <li>Source: exporter-message</li>
+                    <li>{supplierEvidence}</li>
+                    <li>Confidence: {formatConfidence(supplierClaim.confidence)}</li>
+                  </ul>
+                </details>
+              )}
+            </>
+          ) : (
+            <div className="payment-empty-state">
+              <p className="highlight">Waiting for extraction</p>
+              <p className="muted">No structured supplier claim yet.</p>
+              <p className="muted">
+                Click &quot;Extract supplier claim&quot; to populate this card from the exporter message.
+              </p>
             </div>
-            <div>
-              <dt>Supplier promised ETA</dt>
-              <dd>2026-06-09</dd>
-            </div>
-            <div>
-              <dt>Route context</dt>
-              <dd>Asia → Hamburg</dd>
-            </div>
-            <div>
-              <dt>Claim</dt>
-              <dd>Supplier claims the vessel will arrive by 2026-06-09.</dd>
-            </div>
-          </dl>
+          )}
         </article>
 
         <article className="card">
           <div className="card-header">
-            <span className="section-tag">2. Agent Action</span>
+            <span className="section-tag">3. Agent Action</span>
             <span className="status-pill action">Agent Trigger</span>
           </div>
           <h2>Request ETA Risk Intelligence</h2>
@@ -859,12 +1332,15 @@ function App() {
           <button
             className="primary-button"
             onClick={handleBuyIntelligence}
-            disabled={state.kind === "loading"}
+            disabled={state.kind === "loading" || !hasExtractedClaim}
           >
             {state.kind === "loading"
               ? "Requesting MarineAgent intelligence..."
               : "Request ETA Risk Intelligence"}
           </button>
+          {!hasExtractedClaim && (
+            <p className="muted">Extract supplier claim first.</p>
+          )}
           <div className="whitelist-panel">
             {!isWhitelisted ? (
               <button
@@ -889,21 +1365,22 @@ function App() {
                 </button>
               </>
             )}
-            <p className="disclaimer">
-              Demo whitelist only. In production this would be policy-based
-              agent authorization with spending limits and agent-side signing.
-            </p>
+            
             {autoPayMessage && <p className="muted">{autoPayMessage}</p>}
           </div>
           <div className="request-meta">
             <span className="request-label">Live backend endpoint</span>
-            <code className="request-line">GET {ETA_RISK_URL}</code>
+            {hasExtractedClaim ? (
+              <code className="request-line">GET {etaRiskUrl}</code>
+            ) : (
+              <p className="muted">The protected ETA-risk request appears here after extraction.</p>
+            )}
           </div>
         </article>
 
         <article className="card">
           <div className="card-header">
-            <span className="section-tag">3. Payment State</span>
+            <span className="section-tag">4. Payment State</span>
             <span
               className={`status-pill ${
                 liveCheckpointReached
@@ -922,10 +1399,14 @@ function App() {
           </div>
           <h2>x402 payment checkpoint</h2>
           {state.kind === "idle" && (
-            <p className="muted">
-              No request yet. The page is waiting for Hamburg Cargo&apos;s agent
-              to request ETA risk intelligence.
-            </p>
+            <div className="payment-empty-state">
+              <p className="highlight">Waiting for request</p>
+              <p className="muted">No payment checkpoint yet.</p>
+              <p className="muted">
+                The x402 payment requirement will appear here after the agent
+                requests ETA risk intelligence.
+              </p>
+            </div>
           )}
           {state.kind === "loading" && (
             <p className="muted">
@@ -938,38 +1419,22 @@ function App() {
               <div className="checkpoint-banner">
                 <span className="checkpoint-badge">Real HTTP 402</span>
                 <div className="checkpoint-copy">
-                  <strong>REAL x402 CHECKPOINT</strong>
-                  <p>
-                    HTTP 402 Payment Required received from MarineAgent.
-                  </p>
+                  <strong>x402 Payment Required</strong>
+                  <p>HTTP 402 checkpoint reached.</p>
                 </div>
               </div>
-              <p className="highlight">
-                payment-required header decoded. No ETA intelligence was released.
-              </p>
+              <p className="highlight">No ETA intelligence was released.</p>
               <ul className="detail-list evidence-list-compact">
-                <li>Status: HTTP {statusCode}</li>
-                <li>Scheme: {displayedAccept?.scheme ?? "Unavailable"}</li>
                 <li>
                   Network: {formatNetwork(
-                    displayedAccept?.network ?? ALGOD_TESTNET_CAIP2,
-                    displayedAccept?.extra?.genesisId,
+                    paymentStateAccept?.network ?? ALGOD_TESTNET_CAIP2,
+                    paymentStateAccept?.extra?.genesisId,
                   )}
                 </li>
-                <li>Asset: {assetName}</li>
-                <li>TestNet Asset ID: {displayedAccept?.asset ?? TESTNET_USDC_ASSET_ID}</li>
-                <li>Amount: {humanAmount} {assetCode}</li>
-                <li>Receiver: {shortenAddress(displayedAccept?.payTo)}</li>
-                <li>
-                  Timeout: {timeoutSeconds !== undefined ? `${timeoutSeconds} seconds` : "Not provided"}
-                </li>
-                <li>
-                  Header evidence: {headerPresent ? "payment-required header present" : "header missing"}
-                </li>
+                <li>Asset: {paymentStateAssetName}</li>
+                <li>Amount: {paymentStateHumanAmount} {paymentStateAssetCode}</li>
+                <li>Receiver: {paymentStateReceiver}</li>
               </ul>
-              <p className="disclaimer">
-                MarineAgent did not release ETA intelligence before payment.
-              </p>
               {state.kind !== "paying" && (
                 <button
                   className="secondary-button"
@@ -978,6 +1443,11 @@ function App() {
                 >
                   Confirm x402 Payment
                 </button>
+              )}
+              {isWhitelisted && (
+                <p className="muted">
+                  Whitelist active. Matching ETA risk payment requirements can auto-confirm.
+                </p>
               )}
               {state.kind === "paying" && (
                 <div className="truth-panel">
@@ -1002,34 +1472,16 @@ function App() {
           {failedPayment && (
             <div className="truth-panel failure-panel">
               <span className="truth-badge failure-badge">Payment attempt failed</span>
-              <h3>PAYMENT ATTEMPT FAILED</h3>
-              <p className="truth-copy">
-                The backend demo payer attempted a real x402 payment but did not
-                receive a paid intelligence release.
-              </p>
+              <h3>Payment attempt failed</h3>
+              <p className="truth-copy">Retry status: HTTP {failedDebugEvidence?.retry_status_code ?? failedPayment.status_code}</p>
               {failedPayment.error && (
-                <p className="truth-copy">Reason: {failedPayment.error}</p>
+                <p className="truth-copy">Reason: {decodedRetryError ?? failedPayment.error}</p>
               )}
               <ul className="detail-list evidence-list-compact">
                 <li>Payer: {shortenAddress(failedPayment.payer_address ?? undefined)}</li>
                 <li>
-                  Retry status: HTTP {failedDebugEvidence?.retry_status_code ?? failedPayment.status_code}
-                </li>
-                {decodedRetryError && <li>Retry x402 error: {decodedRetryError}</li>}
-                <li>Required asset: {failedPayment.payment_evidence.asset_id}</li>
-                <li>Required asset name: {failedPayment.payment_evidence.asset_label}</li>
-                <li>
-                  Required amount: {failedPayment.payment_evidence.amount}{" "}
+                  Required: {failedPayment.payment_evidence.amount}{" "}
                   {formatAssetCode(failedPayment.payment_evidence.asset_id)}
-                </li>
-                <li>
-                  {failedDebugEvidence?.payment_response_header_present
-                    ? "Payment response header was created and sent to MarineAgent."
-                    : "Payment response header was not created."}
-                </li>
-                <li>
-                  This is a real payment failure from the current x402/Algorand
-                  path, not a mocked UI state.
                 </li>
               </ul>
               {(failedDebugEvidence?.decoded_retry_payment_required ||
@@ -1037,7 +1489,7 @@ function App() {
                 failedDebugEvidence?.retry_body ||
                 failedDebugEvidence?.payment_response_header_present) && (
                 <details className="protocol-evidence">
-                  <summary>Retry payment-required evidence</summary>
+                  <summary>Retry evidence</summary>
                   {failedDebugEvidence?.decoded_retry_payment_required && (
                     <code className="protocol-line">
                       decoded retry payment-required:{" "}
@@ -1065,10 +1517,10 @@ function App() {
               )}
             </div>
           )}
-          {hasManualFailure && (
+          {showManualFailureState && (
             <div className="truth-panel failure-panel">
               <span className="truth-badge failure-badge">Payment attempt failed</span>
-              <h3>PAYMENT ATTEMPT FAILED</h3>
+              <h3>Payment attempt failed</h3>
               <p className="truth-copy">
                 The x402 client attempted payment but Algorand simulation rejected
                 the transaction.
@@ -1092,11 +1544,14 @@ function App() {
           {hasLiveSettlement && (
             <div className="truth-panel settlement-panel">
               <span className="truth-badge settlement-badge">Live paid response</span>
-              <h3>PAYMENT SETTLED ON ALGORAND TESTNET</h3>
+              <h3>Payment settled</h3>
+              <p className="truth-copy">Algorand TestNet x402 payment accepted.</p>
+              <p className="truth-copy">ETA intelligence released.</p>
               <ul className="detail-list evidence-list-compact">
+                <li>Payer: {shortenAddress(liveSettlement?.payer ?? undefined)}</li>
+                <li>Receiver: {paymentStateReceiver}</li>
+                <li>Amount: {paymentStateHumanAmount} {paymentStateAssetCode}</li>
                 <li>Transaction ID: {liveSettlement?.transaction}</li>
-                <li>Settlement verified</li>
-                <li>ETA intelligence released</li>
               </ul>
               <a
                 className="protocol-link"
@@ -1104,7 +1559,7 @@ function App() {
                 target="_blank"
                 rel="noreferrer"
               >
-                View on Lora TestNet
+                View transaction in Lora
               </a>
               {liveSettlementHeader && (
                 <details className="protocol-evidence">
@@ -1119,17 +1574,19 @@ function App() {
           {liveDemoPayment?.paid && (
             <div className="truth-panel settlement-panel">
               <span className="truth-badge settlement-badge">Backend demo payer</span>
-              <h3>PAYMENT SETTLED ON ALGORAND TESTNET</h3>
+              <h3>Payment settled</h3>
+              <p className="truth-copy">Algorand TestNet x402 payment accepted.</p>
+              <p className="truth-copy">ETA intelligence released.</p>
               <ul className="detail-list evidence-list-compact">
                 <li>Payer: {shortenAddress(liveDemoPayment.payer_address ?? undefined)}</li>
+                <li>Receiver: {paymentStateReceiver}</li>
+                <li>Amount: {paymentStateHumanAmount} {paymentStateAssetCode}</li>
                 {liveDemoPayment.payment_evidence.transaction_id && (
                   <li>Transaction ID: {liveDemoPayment.payment_evidence.transaction_id}</li>
                 )}
                 {liveDemoPayment.payment_evidence.group_id && (
                   <li>Settlement/group ID: {liveDemoPayment.payment_evidence.group_id}</li>
                 )}
-                <li>Settlement verified</li>
-                <li>ETA intelligence released</li>
               </ul>
               {liveDemoPayment.payment_evidence.lora_url && (
                 <a
@@ -1138,7 +1595,7 @@ function App() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  View on Lora TestNet
+                  View transaction in Lora
                 </a>
               )}
               {liveDemoPayment.payment_evidence.note && (
@@ -1146,7 +1603,7 @@ function App() {
               )}
             </div>
           )}
-          {hasManualSettlement && (
+          {showManualSettlementState && (
             <div className="truth-panel settlement-panel">
               <span className="truth-badge settlement-badge">Manual client evidence</span>
               <h3>PAYMENT SETTLED ON ALGORAND TESTNET</h3>
@@ -1179,67 +1636,70 @@ function App() {
               <li>Displayed network: {formatNetwork(currentResult?.price.network ?? "")}</li>
             </ul>
           )}
-          <div className="manual-evidence-panel">
-            <div className="card-header compact-header">
-              <span className="section-tag">Manual demo evidence from Python x402 client</span>
-              <button className="ghost-button" onClick={clearManualEvidence} type="button">
-                Clear
-              </button>
+          <details className="manual-evidence-details">
+            <summary>Manual evidence override</summary>
+            <div className="manual-evidence-panel">
+              <div className="card-header compact-header">
+                <span className="section-tag">Optional: paste transaction evidence from the Python x402 client or Lora.</span>
+                <button className="ghost-button" onClick={clearManualEvidence} type="button">
+                  Clear
+                </button>
+              </div>
+              <div className="manual-grid">
+                <label className="manual-field">
+                  <span>Payer address</span>
+                  <input
+                    className="manual-input"
+                    name="payerAddress"
+                    value={manualEvidence.payerAddress}
+                    onChange={handleManualEvidenceChange}
+                    placeholder="OBTH43WN4M3HRNKVX5PCUW3B3MQA7WW7ISQT5VU6W6CIMNU4PX7I5H4IJA"
+                  />
+                </label>
+                <label className="manual-field">
+                  <span>Transaction ID</span>
+                  <input
+                    className="manual-input"
+                    name="transactionId"
+                    value={manualEvidence.transactionId}
+                    onChange={handleManualEvidenceChange}
+                    placeholder="Paste txid from the Python client"
+                  />
+                </label>
+                <label className="manual-field">
+                  <span>Settlement/group ID</span>
+                  <input
+                    className="manual-input"
+                    name="settlementGroupId"
+                    value={manualEvidence.settlementGroupId}
+                    onChange={handleManualEvidenceChange}
+                    placeholder="Optional group or settlement id"
+                  />
+                </label>
+                <label className="manual-field">
+                  <span>Lora URL</span>
+                  <input
+                    className="manual-input"
+                    name="loraUrl"
+                    value={manualEvidence.loraUrl}
+                    onChange={handleManualEvidenceChange}
+                    placeholder="https://lora.algokit.io/testnet/transaction/<txid>"
+                  />
+                </label>
+              </div>
+              <label className="manual-field">
+                <span>Payment error message</span>
+                <textarea
+                  className="manual-input manual-textarea"
+                  name="paymentErrorMessage"
+                  value={manualEvidence.paymentErrorMessage}
+                  onChange={handleManualEvidenceChange}
+                  placeholder={KNOWN_FAILURE_EXAMPLE}
+                  rows={3}
+                />
+              </label>
             </div>
-            <div className="manual-grid">
-              <label className="manual-field">
-                <span>Payer address</span>
-                <input
-                  className="manual-input"
-                  name="payerAddress"
-                  value={manualEvidence.payerAddress}
-                  onChange={handleManualEvidenceChange}
-                  placeholder="OBTH43WN4M3HRNKVX5PCUW3B3MQA7WW7ISQT5VU6W6CIMNU4PX7I5H4IJA"
-                />
-              </label>
-              <label className="manual-field">
-                <span>Transaction ID</span>
-                <input
-                  className="manual-input"
-                  name="transactionId"
-                  value={manualEvidence.transactionId}
-                  onChange={handleManualEvidenceChange}
-                  placeholder="Paste txid from the Python client"
-                />
-              </label>
-              <label className="manual-field">
-                <span>Settlement/group ID</span>
-                <input
-                  className="manual-input"
-                  name="settlementGroupId"
-                  value={manualEvidence.settlementGroupId}
-                  onChange={handleManualEvidenceChange}
-                  placeholder="Optional group or settlement id"
-                />
-              </label>
-              <label className="manual-field">
-                <span>Lora URL</span>
-                <input
-                  className="manual-input"
-                  name="loraUrl"
-                  value={manualEvidence.loraUrl}
-                  onChange={handleManualEvidenceChange}
-                  placeholder="https://lora.algokit.io/testnet/transaction/<txid>"
-                />
-              </label>
-            </div>
-            <label className="manual-field">
-              <span>Payment error message</span>
-              <textarea
-                className="manual-input manual-textarea"
-                name="paymentErrorMessage"
-                value={manualEvidence.paymentErrorMessage}
-                onChange={handleManualEvidenceChange}
-                placeholder={KNOWN_FAILURE_EXAMPLE}
-                rows={3}
-              />
-            </label>
-          </div>
+          </details>
           {state.kind === "error" && (
             <p className="error-copy">{state.message}</p>
           )}
@@ -1249,7 +1709,7 @@ function App() {
       <section className="result-grid">
         <article className="card intelligence-card">
           <div className="card-header">
-            <span className="section-tag">4. Intelligence Result</span>
+            <span className="section-tag">5. Intelligence Result</span>
             <span
               className={`status-pill ${
                 state.kind === "live" ? "real" : state.kind === "demo" ? "demo" : "neutral"
@@ -1265,8 +1725,8 @@ function App() {
           <h2>ETA risk intelligence</h2>
           {!currentResult &&
             !liveCheckpointReached &&
-            !hasManualFailure &&
-            !hasManualSettlement && (
+            !showManualFailureState &&
+            !showManualSettlementState && (
             <p className="muted">
               The ETA intelligence panel will populate after a successful live
               response or an explicit demo-only unlock.
@@ -1274,8 +1734,8 @@ function App() {
           )}
           {liveCheckpointReached &&
             state.kind !== "payment_failed" &&
-            !hasManualFailure &&
-            !hasManualSettlement && (
+            !showManualFailureState &&
+            !showManualSettlementState && (
             <div className="payment-evidence-state">
               <p className="highlight">Payment checkpoint reached.</p>
               <p className="muted">
@@ -1305,7 +1765,7 @@ function App() {
               </p>
             </div>
           )}
-          {hasManualFailure && (
+          {showManualFailureState && (
             <div className="payment-evidence-state">
               <p className="highlight">Payment attempt failed.</p>
               <p className="muted">
@@ -1355,7 +1815,7 @@ function App() {
               </p>
             </div>
           )}
-          {hasManualSettlement && !hasLiveSettlement && !currentResult && (
+          {showManualSettlementState && !hasLiveSettlement && !currentResult && (
             <div className="payment-evidence-state">
               <p className="highlight">External settlement evidence captured.</p>
               <p className="muted">
@@ -1420,7 +1880,7 @@ function App() {
 
         <article className="card decision-card">
           <div className="card-header">
-            <span className="section-tag">5. Business Decision</span>
+            <span className="section-tag">6. Recommended Action</span>
             <span className="status-pill action">Operational Output</span>
           </div>
           <h2>Hamburg Cargo recommendation</h2>
@@ -1438,13 +1898,125 @@ function App() {
                 <strong>{delayDays} days</strong>
               </div>
               <div className="decision-meta">
-                  <span>Intelligence source</span>
-                  <strong>
-                    {state.kind === "live"
-                      ? "Real paid backend response"
-                      : "Demo-only unlocked preview"}
+                <span>Intelligence source</span>
+                <strong>
+                  {state.kind === "live"
+                    ? "Real paid backend response"
+                    : "Demo-only unlocked preview"}
                 </strong>
               </div>
+              <div className="decision-meta">
+                <span>Recommended action</span>
+                <strong>{warehouseRecommendation}</strong>
+              </div>
+              {canDraftWarehouseEmail && (
+                <div className="action-draft-panel">
+                  <div className="card-header compact-header">
+                    <span className="section-tag">Warehouse action draft</span>
+                    <span className="status-pill action">Human approval required</span>
+                  </div>
+                  {draftState.kind === "idle" && (
+                    <>
+                      <p className="muted">
+                        Hamburg Cargo&apos;s agent can now prepare a warehouse notification
+                        draft from paid ETA intelligence. A human operator must approve it
+                        before manual sending.
+                      </p>
+                      <button
+                        className="secondary-button"
+                        onClick={handleDraftWarehouseEmail}
+                        type="button"
+                      >
+                        Draft warehouse email
+                      </button>
+                    </>
+                  )}
+                  {draftState.kind === "drafting" && (
+                    <p className="muted">
+                      Hamburg Cargo agent is drafting a warehouse notification...
+                    </p>
+                  )}
+                  {draftState.kind === "error" && (
+                    <p className="error-copy">{draftState.message}</p>
+                  )}
+                  {currentDraft && (
+                    <>
+                      <div className="draft-meta">
+                        <div className="decision-meta">
+                          <span>Status</span>
+                          <strong>
+                            {draftState.kind === "approved"
+                              ? "approved"
+                              : draftState.kind === "rejected"
+                                ? "rejected"
+                                : currentDraft.status}
+                          </strong>
+                        </div>
+                        <div className="decision-meta">
+                          <span>Send status</span>
+                          <strong>{currentDraft.send_status}</strong>
+                        </div>
+                      </div>
+                      <div className="email-draft-block">
+                        <span>Subject</span>
+                        <p className="draft-subject">{currentDraft.subject}</p>
+                        <span>Body</span>
+                        <pre className="draft-body">{currentDraft.body}</pre>
+                      </div>
+                      <div className="evidence-block draft-evidence-block">
+                        <h3>Evidence source</h3>
+                        <ul className="evidence-list">
+                          {currentDraft.evidence.map((item) => (
+                            <li key={`${item.source}-${item.summary}`}>
+                              <span>{item.source}</span>
+                              <p>{item.summary}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      {draftState.kind === "approved" && (
+                        <p className="disclaimer success-copy">
+                          Approved for manual sending. No email was sent by MarineAgent.
+                        </p>
+                      )}
+                      {draftState.kind === "rejected" && (
+                        <p className="error-copy">Draft rejected by operator.</p>
+                      )}
+                      {copyMessage && <p className="disclaimer">{copyMessage}</p>}
+                      <div className="action-button-row">
+                        {draftState.kind !== "approved" && (
+                          <button
+                            className="secondary-button"
+                            onClick={handleApproveDraft}
+                            type="button"
+                          >
+                            Approve draft
+                          </button>
+                        )}
+                        <button
+                          className="secondary-button"
+                          onClick={handleCopyEmail}
+                          type="button"
+                        >
+                          Copy email
+                        </button>
+                        <button
+                          className="ghost-button"
+                          onClick={handleRejectDraft}
+                          type="button"
+                        >
+                          Reject draft
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {!canDraftWarehouseEmail && state.kind === "demo" && (
+                <p className="disclaimer">
+                  Warehouse drafting is disabled for demo-only preview output. A real paid ETA intelligence release is required.
+                </p>
+              )}
             </>
           )}
         </article>

@@ -29,7 +29,6 @@ from app.features.commerce.x402_config import X402Settings, get_x402_settings
 
 ETA_RISK_DEMO_PATH = "/v1/vessels/9321483/eta-risk"
 TESTNET_LORA_TRANSACTION_URL = "https://lora.algokit.io/testnet/transaction"
-EXPECTED_PROMISED_ETA = "2026-06-09"
 HEADER_PREVIEW_LENGTH = 120
 logger = logging.getLogger(__name__)
 
@@ -309,22 +308,24 @@ class DemoPaymentExecutor:
         if parsed.hostname not in {"127.0.0.1", "localhost"}:
             raise ValueError("resource_url must point to the local MarineAgent demo backend.")
 
-        if resource_url != expected_url:
-            raise ValueError(
-                "resource_url must match the configured demo RESOURCE_URL exactly."
-            )
-
         if parsed.path != ETA_RISK_DEMO_PATH:
             raise ValueError("resource_url must target the protected ETA risk demo path.")
 
-        promised_eta = parse_qs(parsed.query).get("promised_eta", [None])[0]
-        if promised_eta != EXPECTED_PROMISED_ETA:
-            raise ValueError(
-                "resource_url must use the expected demo promised_eta query value."
-            )
-
         if expected.hostname not in {"127.0.0.1", "localhost"}:
             raise ValueError("Configured RESOURCE_URL must remain local for the demo payer.")
+
+        expected_query = parse_qs(expected.query)
+        parsed_query = parse_qs(parsed.query)
+
+        if "promised_eta" not in parsed_query or not parsed_query["promised_eta"][0]:
+            raise ValueError(
+                "resource_url must include a promised_eta query parameter."
+            )
+
+        if "promised_eta" not in expected_query:
+            raise ValueError(
+                "Configured RESOURCE_URL must include a promised_eta query parameter."
+            )
 
     def _build_payment_evidence(
         self,

@@ -1,0 +1,161 @@
+{"kind":"deck","id":"marineagent-theme","slideCount":2,"slideSize":{"width":1280,"height":720}}
+{"kind":"shape","slide":1,"role":"bg top layer","bbox":[0,0,1280,720]}
+{"kind":"shape","slide":1,"role":"bg bottom layer","bbox":[0,300,1280,420]}
+{"kind":"shape","slide":1,"role":"amber glow","bbox":[-180,-160,520,520]}
+{"kind":"shape","slide":1,"role":"teal glow","bbox":[890,-120,470,470]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[64,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[128,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[192,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[256,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[320,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[384,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[448,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[512,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[576,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[640,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[704,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[768,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[832,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[896,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[960,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[1024,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[1088,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[1152,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[1216,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[1280,0,1,720]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,0,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,64,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,128,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,192,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,256,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,320,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,384,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,448,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,512,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,576,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,640,1280,1]}
+{"kind":"shape","slide":1,"role":"grid line","bbox":[0,704,1280,1]}
+{"kind":"shape","slide":1,"role":"kicker","bbox":[78,62,520,18]}
+{"kind":"textbox","slide":1,"role":"kicker","text":"ALGORAND X402 AGENTIC COMMERCE HACKATHON","bbox":[78,62,520,18]}
+{"kind":"shape","slide":1,"role":"title","bbox":[74,118,580,84]}
+{"kind":"textbox","slide":1,"role":"title","text":"MarineAgent","bbox":[74,118,580,84]}
+{"kind":"shape","slide":1,"role":"subtitle","bbox":[78,214,620,36]}
+{"kind":"textbox","slide":1,"role":"subtitle","text":"Maritime decision intelligence for AI agents.","bbox":[78,214,620,36]}
+{"kind":"shape","slide":1,"role":"story panel","bbox":[74,292,608,170]}
+{"kind":"shape","slide":1,"role":"body","bbox":[108,330,544,100]}
+{"kind":"textbox","slide":1,"role":"body","text":"Hamburg Cargo's AI operations agent requests ETA risk intelligence, receives a real HTTP 402 x402 payment requirement, settles on Algorand TestNet, and unlocks business-ready maritime guidance.","bbox":[108,330,544,100]}
+{"kind":"shape","slide":1,"role":"right statement","bbox":[748,124,390,56]}
+{"kind":"textbox","slide":1,"role":"right statement","text":"Maritime intelligence sold per decision, not per dashboard.","bbox":[748,124,390,56]}
+{"kind":"shape","slide":1,"role":"right body","bbox":[748,205,400,92]}
+{"kind":"textbox","slide":1,"role":"right body","text":"The product is operational confidence: can the supplier ETA be trusted, what is the likely delay, and what should the cargo agent do next.","bbox":[748,205,400,92]}
+{"kind":"shape","slide":1,"role":"chip:HTTP 402 checkpoint","bbox":[748,316,201.2,38]}
+{"kind":"shape","slide":1,"role":"chip text:HTTP 402 checkpoint","bbox":[764,327,169.2,18]}
+{"kind":"textbox","slide":1,"role":"chip text:HTTP 402 checkpoint","text":"HTTP 402 checkpoint","bbox":[764,327,169.2,18]}
+{"kind":"shape","slide":1,"role":"chip:Algorand TestNet","bbox":[748,370,186.8,38]}
+{"kind":"shape","slide":1,"role":"chip text:Algorand TestNet","bbox":[764,381,154.8,18]}
+{"kind":"textbox","slide":1,"role":"chip text:Algorand TestNet","text":"Algorand TestNet","bbox":[764,381,154.8,18]}
+{"kind":"shape","slide":1,"role":"chip:Decision intelligence","bbox":[748,424,210.8,38]}
+{"kind":"shape","slide":1,"role":"chip text:Decision intelligence","bbox":[764,435,178.8,18]}
+{"kind":"textbox","slide":1,"role":"chip text:Decision intelligence","text":"Decision intelligence","bbox":[764,435,178.8,18]}
+{"kind":"shape","slide":1,"role":"proof panel","bbox":[740,504,446,92]}
+{"kind":"shape","slide":1,"role":"proof label","bbox":[770,526,180,20]}
+{"kind":"textbox","slide":1,"role":"proof label","text":"Hackathon proof path","bbox":[770,526,180,20]}
+{"kind":"shape","slide":1,"role":"proof body","bbox":[770,550,378,34]}
+{"kind":"textbox","slide":1,"role":"proof body","text":"Real HTTP 402, real Algorand TestNet payment requirement, and paid ETA intelligence released only after settlement.","bbox":[770,550,378,34]}
+{"kind":"shape","slide":1,"role":"flow:Cargo Agent","bbox":[76,612,170,56]}
+{"kind":"shape","slide":1,"role":"flow accent:Cargo Agent","bbox":[76,612,170,6]}
+{"kind":"shape","slide":1,"role":"flow label:Cargo Agent","bbox":[92,631,138,20]}
+{"kind":"textbox","slide":1,"role":"flow label:Cargo Agent","text":"Cargo Agent","bbox":[92,631,138,20]}
+{"kind":"shape","slide":1,"role":"flow arrow","bbox":[256,625,26,24]}
+{"kind":"textbox","slide":1,"role":"flow arrow","text":"→","bbox":[256,625,26,24]}
+{"kind":"shape","slide":1,"role":"flow:MarineAgent API","bbox":[264,612,170,56]}
+{"kind":"shape","slide":1,"role":"flow accent:MarineAgent API","bbox":[264,612,170,6]}
+{"kind":"shape","slide":1,"role":"flow label:MarineAgent API","bbox":[280,631,138,20]}
+{"kind":"textbox","slide":1,"role":"flow label:MarineAgent API","text":"MarineAgent API","bbox":[280,631,138,20]}
+{"kind":"shape","slide":1,"role":"flow arrow","bbox":[444,625,26,24]}
+{"kind":"textbox","slide":1,"role":"flow arrow","text":"→","bbox":[444,625,26,24]}
+{"kind":"shape","slide":1,"role":"flow:HTTP 402","bbox":[452,612,170,56]}
+{"kind":"shape","slide":1,"role":"flow accent:HTTP 402","bbox":[452,612,170,6]}
+{"kind":"shape","slide":1,"role":"flow label:HTTP 402","bbox":[468,631,138,20]}
+{"kind":"textbox","slide":1,"role":"flow label:HTTP 402","text":"HTTP 402","bbox":[468,631,138,20]}
+{"kind":"shape","slide":1,"role":"flow arrow","bbox":[632,625,26,24]}
+{"kind":"textbox","slide":1,"role":"flow arrow","text":"→","bbox":[632,625,26,24]}
+{"kind":"shape","slide":1,"role":"flow:Algorand TestNet","bbox":[640,612,170,56]}
+{"kind":"shape","slide":1,"role":"flow accent:Algorand TestNet","bbox":[640,612,170,6]}
+{"kind":"shape","slide":1,"role":"flow label:Algorand TestNet","bbox":[656,631,138,20]}
+{"kind":"textbox","slide":1,"role":"flow label:Algorand TestNet","text":"Algorand TestNet","bbox":[656,631,138,20]}
+{"kind":"shape","slide":1,"role":"flow arrow","bbox":[820,625,26,24]}
+{"kind":"textbox","slide":1,"role":"flow arrow","text":"→","bbox":[820,625,26,24]}
+{"kind":"shape","slide":1,"role":"flow:ETA intelligence","bbox":[828,612,170,56]}
+{"kind":"shape","slide":1,"role":"flow accent:ETA intelligence","bbox":[828,612,170,6]}
+{"kind":"shape","slide":1,"role":"flow label:ETA intelligence","bbox":[844,631,138,20]}
+{"kind":"textbox","slide":1,"role":"flow label:ETA intelligence","text":"ETA intelligence","bbox":[844,631,138,20]}
+{"kind":"shape","slide":2,"role":"bg top layer","bbox":[0,0,1280,720]}
+{"kind":"shape","slide":2,"role":"bg bottom layer","bbox":[0,300,1280,420]}
+{"kind":"shape","slide":2,"role":"amber glow","bbox":[-180,-160,520,520]}
+{"kind":"shape","slide":2,"role":"teal glow","bbox":[890,-120,470,470]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[64,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[128,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[192,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[256,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[320,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[384,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[448,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[512,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[576,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[640,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[704,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[768,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[832,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[896,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[960,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[1024,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[1088,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[1152,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[1216,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[1280,0,1,720]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,0,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,64,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,128,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,192,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,256,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,320,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,384,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,448,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,512,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,576,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,640,1280,1]}
+{"kind":"shape","slide":2,"role":"grid line","bbox":[0,704,1280,1]}
+{"kind":"shape","slide":2,"role":"kicker","bbox":[78,58,360,18]}
+{"kind":"textbox","slide":2,"role":"kicker","text":"FUTURE ETA PIPELINE","bbox":[78,58,360,18]}
+{"kind":"shape","slide":2,"role":"title","bbox":[74,110,720,96]}
+{"kind":"textbox","slide":2,"role":"title","text":"Real ETA Risk Requires More Than AIS","bbox":[74,110,720,96]}
+{"kind":"shape","slide":2,"role":"subtitle","bbox":[78,210,830,58]}
+{"kind":"textbox","slide":2,"role":"subtitle","text":"MarineAgent sells operational judgment, not raw coordinates. ETA risk is produced from multiple maritime signals combined into a realistic arrival forecast.","bbox":[78,210,830,58]}
+{"kind":"shape","slide":2,"role":"card:Live Inputs","bbox":[74,306,360,210]}
+{"kind":"shape","slide":2,"role":"card accent:Live Inputs","bbox":[74,306,360,6]}
+{"kind":"shape","slide":2,"role":"card title:Live Inputs","bbox":[96,328,316,24]}
+{"kind":"textbox","slide":2,"role":"card title:Live Inputs","text":"Live Inputs","bbox":[96,328,316,24]}
+{"kind":"shape","slide":2,"role":"card body:Live Inputs","bbox":[96,372,316,120]}
+{"kind":"textbox","slide":2,"role":"card body:Live Inputs","text":"• Live AIS position, speed, course, destination\n• Remaining sea-route distance\n• Vessel profile, draught, service speed","bbox":[96,372,316,120]}
+{"kind":"shape","slide":2,"role":"card:Delay Drivers","bbox":[460,306,360,210]}
+{"kind":"shape","slide":2,"role":"card accent:Delay Drivers","bbox":[460,306,360,6]}
+{"kind":"shape","slide":2,"role":"card title:Delay Drivers","bbox":[482,328,316,24]}
+{"kind":"textbox","slide":2,"role":"card title:Delay Drivers","text":"Delay Drivers","bbox":[482,328,316,24]}
+{"kind":"shape","slide":2,"role":"card body:Delay Drivers","bbox":[482,372,316,120]}
+{"kind":"textbox","slide":2,"role":"card body:Delay Drivers","text":"• Marine weather and sea-state forecast\n• Port congestion and berth delay\n• Historical performance and uncertainty buffer","bbox":[482,372,316,120]}
+{"kind":"shape","slide":2,"role":"card:Decision Output","bbox":[846,306,360,210]}
+{"kind":"shape","slide":2,"role":"card accent:Decision Output","bbox":[846,306,360,6]}
+{"kind":"shape","slide":2,"role":"card title:Decision Output","bbox":[868,328,316,24]}
+{"kind":"textbox","slide":2,"role":"card title:Decision Output","text":"Decision Output","bbox":[868,328,316,24]}
+{"kind":"shape","slide":2,"role":"card body:Decision Output","bbox":[868,372,316,120]}
+{"kind":"textbox","slide":2,"role":"card body:Decision Output","text":"• Supplier ETA credibility score\n• Realistic ETA and delay risk\n• Recommended customer and warehouse action","bbox":[868,372,316,120]}
+{"kind":"shape","slide":2,"role":"formula panel","bbox":[74,558,1134,106]}
+{"kind":"shape","slide":2,"role":"formula label","bbox":[100,580,170,18]}
+{"kind":"textbox","slide":2,"role":"formula label","text":"Forecast formula","bbox":[100,580,170,18]}
+{"kind":"shape","slide":2,"role":"formula","bbox":[100,608,1080,26]}
+{"kind":"textbox","slide":2,"role":"formula","text":"Realistic ETA = current time + remaining sea-route distance / effective speed + weather delay + port congestion delay + uncertainty buffer","bbox":[100,608,1080,26]}
+{"kind":"shape","slide":2,"role":"footer","bbox":[100,638,930,18]}
+{"kind":"textbox","slide":2,"role":"footer","text":"MarineAgent turns maritime telemetry into business decisions for autonomous software buyers.","bbox":[100,638,930,18]}

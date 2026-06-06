@@ -47,3 +47,11 @@ The Hamburg Cargo frontend is a small single-page Vite/React demo layered on top
 ## Decision 12: Allow Backend Demo Payer Custody Only For The Hackathon Demo
 
 MarineAgent now includes a demo-only backend payment confirmation endpoint that uses `AVM_PRIVATE_KEY` server-side to act as Hamburg Cargo's demo agent wallet. This keeps the real x402 settlement flow available from the frontend without exposing private keys to the browser, but it is explicitly not the production custody model. Production should move to agent-side signing, wallet delegation, or policy-limited spending authorization.
+
+## Decision 13: Keep Agent Actions Draft-And-Approve Only
+
+Warehouse email actions are downstream operational drafts produced from paid ETA intelligence. For the hackathon demo, MarineAgent may generate those drafts and record demo-local approval state, but it does not send real email. Human approval is mandatory, and any final send remains manual outside the product.
+
+## Decision 14: Use Deterministic Supplier Claim Extraction For The Hackathon Demo
+
+Supplier message extraction now uses deterministic parsing for IMO, route, and promised ETA before the paid ETA-risk flow begins. This keeps the live x402 demo reliable without introducing an OpenAI dependency that could fail at pitch time, while preserving a clean future path to optional structured LLM extraction behind the same service boundary.

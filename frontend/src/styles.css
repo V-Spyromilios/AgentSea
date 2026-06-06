@@ -383,6 +383,22 @@ code {
   color: #ffb5a1;
 }
 
+.payment-empty-state {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.manual-evidence-details {
+  margin-top: 1rem;
+}
+
+.manual-evidence-details summary {
+  cursor: pointer;
+  color: #95d6cd;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
 .payment-evidence-state {
   display: grid;
   gap: 0.8rem;
@@ -577,6 +593,65 @@ code {
   gap: 0.9rem;
 }
 
+.action-draft-panel {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.draft-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.email-draft-block {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.email-draft-block span {
+  color: #8eb8bc;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.draft-subject,
+.draft-body {
+  margin: 0;
+  color: #f2efe8;
+}
+
+.draft-body {
+  white-space: pre-wrap;
+  padding: 0.95rem;
+  border-radius: 0.9rem;
+  overflow-wrap: anywhere;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.draft-evidence-block {
+  margin-top: 0;
+}
+
+.action-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.success-copy {
+  color: #b8f0c9;
+}
+
 @media (max-width: 980px) {
   .card,
   .intelligence-card,
@@ -604,6 +679,10 @@ code {
   }
 
   .manual-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .draft-meta {
     grid-template-columns: 1fr;
   }
 }

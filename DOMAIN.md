@@ -10,6 +10,8 @@ Hamburg Cargo is the first demo customer. Its AI operations agent buys maritime 
 
 The demo frontend visualizes Hamburg Cargo's AI operations agent requesting ETA risk intelligence, encountering an x402 paywall, and then either confirming a real TestNet payment through the backend demo payer or showing a clearly labelled pitch-only preview.
 
+Supplier messages are upstream operational evidence in that flow. MarineAgent first extracts a structured supplier claim from the inbound message, then evaluates that claim through paid ETA risk intelligence.
+
 ## AIS
 
 AIS means Automatic Identification System. It is a vessel tracking signal source. In AgentSea, AIS is an input to reasoning, not the final product.
@@ -29,6 +31,10 @@ Departure Verification checks whether a supplier's claim that a vessel has depar
 ## Agentic Commerce
 
 Agentic Commerce means software agents can discover, buy, and consume API-delivered intelligence products with minimal human intervention.
+
+## Agent Actions
+
+Agent actions are downstream operational drafts produced from paid intelligence. In the hackathon demo, MarineAgent can draft a warehouse notification email from ETA risk output, but a human operator must approve it and send it manually outside the product.
 
 ## x402
 

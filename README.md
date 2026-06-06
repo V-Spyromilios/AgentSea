@@ -27,6 +27,8 @@ The project uses vertical slice architecture under `app/features/`.
 - `port_congestion/` returns congestion intelligence from mock port metrics
 - `departure_verification/` checks whether a supplier departure claim appears credible
 - `commerce/` contains pricing, x402 configuration, and the ETA risk payment boundary
+- `agent_actions/` creates downstream operational drafts such as warehouse email notifications that still require human approval
+- `message_extraction/` converts exporter messages into structured supplier claims that drive the ETA-risk request
 
 Business logic lives in services. Routers stay thin.
 
@@ -149,19 +151,24 @@ VITE_AGENTSEA_API_BASE_URL=http://127.0.0.1:8000
 
 Demo flow:
 
-- The frontend makes a real request to `GET /v1/vessels/9321483/eta-risk?promised_eta=2026-06-09`
+- The frontend starts with an editable exporter message and calls `POST /v1/message-extraction/supplier-claim`
+- The extracted supplier claim populates the structured claim card and determines the `promised_eta` used in the ETA-risk request
+- The frontend then makes a real request to `GET /v1/vessels/9321483/eta-risk?promised_eta=...`
 - If the backend returns `402`, the UI shows a real paywall state and decoded `PAYMENT-REQUIRED` header evidence
 - The UI can then call `POST /v1/commerce/demo/pay-eta-risk`, which uses the real backend demo payer wallet from `AVM_PRIVATE_KEY` to attempt x402 settlement and return paid ETA intelligence if the payment succeeds
+- After a real paid ETA response is released, the UI can call `POST /v1/agent-actions/warehouse-email-draft` to generate a warehouse notification draft and then call `POST /v1/agent-actions/{action_id}/approve` for demo-only human approval before manual sending
 - A local whitelist toggle can auto-confirm future ETA risk payments only when the decoded payment requirement matches the fixed demo policy
 - The payment card can also display manually pasted Python client evidence such as a real TestNet payment failure or a real transaction ID/Lora link
 - A separate demo-only button can reveal a clearly labelled preview of the paid intelligence for pitch purposes
 - That demo button does not perform payment verification and does not change backend x402 behavior
+- The warehouse email draft can be copied manually after approval, but no real email is sent by MarineAgent
 
 Hackathon safety note:
 
 - The backend demo payer is for local hackathon demos only
 - Never expose `AVM_PRIVATE_KEY` to the frontend
 - Production should move to agent-side signing, wallet delegation, or explicit spending-policy controls
+- Warehouse email drafts are demo-only operational outputs and still require human approval plus manual sending outside the product
 
 ## Testing
 
@@ -214,6 +221,36 @@ ETA risk when x402 is enabled and unpaid:
 
 ```bash
 curl -i "http://127.0.0.1:8000/v1/vessels/9321483/eta-risk?promised_eta=2026-06-09"
+```
+
+Supplier claim extraction:
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/message-extraction/supplier-claim \
+  -H "Content-Type: application/json" \
+  -d '{
+    "imo_hint": "9321483",
+    "route_hint": "Asia → Hamburg",
+    "message": "Hi Hamburg Cargo team,\n\nHamburg Trader is still expected to arrive in Hamburg by 2026-06-13.\nPlease keep the warehouse slot ready.\n\nIMO: 9321483\nRoute: Asia to Hamburg"
+  }'
+```
+
+Warehouse email draft:
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/agent-actions/warehouse-email-draft \
+  -H "Content-Type: application/json" \
+  -d '{
+    "company_name": "Hamburg Cargo",
+    "warehouse_name": "Hamburg North Warehouse",
+    "vessel_name": "Hamburg Trader",
+    "imo": "9321483",
+    "supplier_promised_eta": "2026-06-09",
+    "realistic_eta": "2026-06-12",
+    "delay_days": 3,
+    "risk_level": "high",
+    "recommendation": "Notify warehouse and prepare a fallback receiving slot."
+  }'
 ```
 
 Port congestion:
