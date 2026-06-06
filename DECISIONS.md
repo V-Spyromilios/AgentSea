@@ -43,3 +43,7 @@ Application configuration is now loaded from one place through Pydantic settings
 ## Decision 11: Keep The Frontend Demo Thin And Honest
 
 The Hamburg Cargo frontend is a small single-page Vite/React demo layered on top of the existing backend. It may show a clearly labelled demo-only unlocked intelligence preview after a real `402` response, but it must not fake payment verification or imply that a browser click completed an Algorand settlement.
+
+## Decision 12: Allow Backend Demo Payer Custody Only For The Hackathon Demo
+
+MarineAgent now includes a demo-only backend payment confirmation endpoint that uses `AVM_PRIVATE_KEY` server-side to act as Hamburg Cargo's demo agent wallet. This keeps the real x402 settlement flow available from the frontend without exposing private keys to the browser, but it is explicitly not the production custody model. Production should move to agent-side signing, wallet delegation, or policy-limited spending authorization.

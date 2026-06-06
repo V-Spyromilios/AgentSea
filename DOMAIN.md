@@ -8,7 +8,7 @@ AgentSea is an agent-first maritime intelligence API. It sells business-ready ju
 
 Hamburg Cargo is the first demo customer. Its AI operations agent buys maritime intelligence from AgentSea to monitor import and export shipments.
 
-The demo frontend visualizes Hamburg Cargo's AI operations agent requesting ETA risk intelligence, encountering an x402 paywall, and then showing a clearly labelled pitch-only preview while live payment is still pending.
+The demo frontend visualizes Hamburg Cargo's AI operations agent requesting ETA risk intelligence, encountering an x402 paywall, and then either confirming a real TestNet payment through the backend demo payer or showing a clearly labelled pitch-only preview.
 
 ## AIS
 
@@ -32,11 +32,11 @@ Agentic Commerce means software agents can discover, buy, and consume API-delive
 
 ## x402
 
-x402 is the payment protocol AgentSea now uses for ETA Risk in Milestone 2. An unpaid ETA risk request returns HTTP 402, and a paid request proceeds to the existing intelligence response.
+x402 is the payment protocol AgentSea now uses for ETA Risk in Milestone 2. An unpaid ETA risk request returns HTTP 402, and a paid request proceeds to the existing intelligence response. For the hackathon demo only, the frontend can ask the backend demo payer to confirm that payment using a server-side key from `.env`.
 
 ## Algorand
 
-Algorand is the blockchain network used for the current ETA Risk payment enforcement boundary. The full end-to-end TestNet demo still needs funded accounts and facilitator-backed verification in a live run.
+Algorand is the blockchain network used for the current ETA Risk payment enforcement boundary. The full end-to-end TestNet demo now includes a frontend confirm-payment path, but it still needs funded accounts and facilitator-backed verification in a live run.
 
 ## Quantoz
 

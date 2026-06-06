@@ -42,6 +42,8 @@ AgentSea is an agent-first maritime intelligence API. The product is structured 
 - Do not fake payment verification in the frontend.
 - If a demo-only unlock is shown, label it clearly as not being a real blockchain payment.
 - Do not move maritime intelligence or x402 business logic into the frontend.
+- A backend demo payer from `AVM_PRIVATE_KEY` is allowed only for local hackathon demos; never return, log, or expose the private key to the frontend.
+- Future production payment flows must use agent-side signing, wallet delegation, or explicit spending-policy controls instead of backend wallet custody.
 
 ## Documentation Maintenance Rules
 

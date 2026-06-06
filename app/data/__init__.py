@@ -1,1 +1,1 @@
-"""Mock data sources for AgentSea."""
+"""Mock data sources for MarineAgent."""

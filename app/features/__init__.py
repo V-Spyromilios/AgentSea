@@ -1,1 +1,1 @@
-"""Feature slices for AgentSea."""
+"""Feature slices for MarineAgent."""

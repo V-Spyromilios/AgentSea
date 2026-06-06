@@ -207,6 +207,15 @@ code {
   border: 1px solid rgba(159, 216, 207, 0.28);
 }
 
+.ghost-button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: transparent;
+  color: #c8d6d7;
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+}
+
 .primary-button:hover,
 .secondary-button:hover {
   transform: translateY(-1px);
@@ -232,6 +241,16 @@ code {
 
 .request-meta {
   margin-top: 0.95rem;
+}
+
+.whitelist-panel {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.whitelist-button {
+  width: 100%;
 }
 
 .request-label {
@@ -348,6 +367,18 @@ code {
   line-height: 1.45;
 }
 
+.protocol-link {
+  display: inline-flex;
+  margin-top: 0.8rem;
+  color: #9fd8cf;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.protocol-link:hover {
+  text-decoration: underline;
+}
+
 .error-copy {
   color: #ffb5a1;
 }
@@ -355,6 +386,56 @@ code {
 .payment-evidence-state {
   display: grid;
   gap: 0.8rem;
+}
+
+.truth-panel,
+.manual-evidence-panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.failure-panel {
+  border-color: rgba(255, 122, 89, 0.22);
+  background: rgba(255, 122, 89, 0.08);
+}
+
+.settlement-panel {
+  border-color: rgba(87, 214, 146, 0.22);
+  background: rgba(87, 214, 146, 0.08);
+}
+
+.truth-badge {
+  display: inline-flex;
+  margin-bottom: 0.7rem;
+  padding: 0.38rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.failure-badge {
+  background: rgba(255, 122, 89, 0.18);
+  color: #ffb5a1;
+}
+
+.settlement-badge {
+  background: rgba(87, 214, 146, 0.18);
+  color: #b8f0c9;
+}
+
+.truth-panel h3 {
+  margin: 0 0 0.7rem;
+  font-size: 1rem;
+}
+
+.truth-copy,
+.truth-note {
+  margin: 0.45rem 0 0;
 }
 
 .demo-preview-banner {
@@ -376,6 +457,43 @@ code {
   justify-self: start;
   background: rgba(105, 168, 255, 0.18);
   color: #c3deff;
+}
+
+.manual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.manual-field {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.8rem;
+}
+
+.manual-field span {
+  color: #8eb8bc;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.manual-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.9rem;
+  padding: 0.8rem 0.9rem;
+  background: rgba(0, 0, 0, 0.18);
+  color: #f2efe8;
+}
+
+.manual-textarea {
+  resize: vertical;
+  min-height: 5.5rem;
+}
+
+.compact-header {
+  margin-bottom: 0.15rem;
 }
 
 .metric-row {
@@ -483,5 +601,9 @@ code {
   .card-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .manual-grid {
+    grid-template-columns: 1fr;
   }
 }

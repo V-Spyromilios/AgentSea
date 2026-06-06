@@ -1,10 +1,10 @@
-# AgentSea
+# MarineAgent
 
-AgentSea is an agent-first maritime intelligence API built for the Algorand x402 Agentic Commerce Hackathon.
+MarineAgent is an agent-first maritime intelligence API built for the Algorand x402 Agentic Commerce Hackathon.
 
 It is designed around a simple idea: maritime intelligence is the product. Raw AIS data is only an ingredient.
 
-The repo now also includes a small Hamburg Cargo frontend demo in `frontend/` for pitch-day storytelling.
+The repo now also includes a small Hamburg Cargo frontend demo in `frontend/` for pitch-day storytelling and a backend demo-payment endpoint for real x402 payment confirmation from the UI.
 
 ## What This Milestone Includes
 
@@ -69,7 +69,7 @@ Create a local `.env` file from the committed example:
 cp .env.example .env
 ```
 
-AgentSea now loads environment variables from `.env` through the centralized settings module in [app/core/config.py](/Users/evangelos/Documents/AgentSea/app/core/config.py:1).
+MarineAgent now loads environment variables from `.env` through the centralized settings module in [app/core/config.py](/Users/evangelos/Documents/AgentSea/app/core/config.py:1).
 
 Replace these values before a real TestNet demo:
 
@@ -85,7 +85,8 @@ Keep these defaults unless your demo environment requires changes:
 Notes:
 
 - The server does not require `AVM_PRIVATE_KEY` to start
-- `AVM_PRIVATE_KEY` and `RESOURCE_URL` are demo-client settings, not server-startup settings
+- `AVM_PRIVATE_KEY` is now also used by the demo-only backend payment confirmation endpoint and must remain server-side only
+- `RESOURCE_URL` tells the backend demo payer which protected ETA risk URL it is allowed to pay
 
 ## Running
 
@@ -150,8 +151,17 @@ Demo flow:
 
 - The frontend makes a real request to `GET /v1/vessels/9321483/eta-risk?promised_eta=2026-06-09`
 - If the backend returns `402`, the UI shows a real paywall state and decoded `PAYMENT-REQUIRED` header evidence
+- The UI can then call `POST /v1/commerce/demo/pay-eta-risk`, which uses the real backend demo payer wallet from `AVM_PRIVATE_KEY` to attempt x402 settlement and return paid ETA intelligence if the payment succeeds
+- A local whitelist toggle can auto-confirm future ETA risk payments only when the decoded payment requirement matches the fixed demo policy
+- The payment card can also display manually pasted Python client evidence such as a real TestNet payment failure or a real transaction ID/Lora link
 - A separate demo-only button can reveal a clearly labelled preview of the paid intelligence for pitch purposes
 - That demo button does not perform payment verification and does not change backend x402 behavior
+
+Hackathon safety note:
+
+- The backend demo payer is for local hackathon demos only
+- Never expose `AVM_PRIVATE_KEY` to the frontend
+- Production should move to agent-side signing, wallet delegation, or explicit spending-policy controls
 
 ## Testing
 
@@ -170,6 +180,7 @@ That runbook covers:
 - opting into TestNet USDC
 - starting AgentSea with `X402_ENABLED=true`
 - confirming the unpaid `402` response
+- using the frontend Confirm x402 Payment button and the backend demo payer endpoint
 - paying with the Python `x402-avm` client
 - receiving the paid ETA risk intelligence response
 
@@ -278,4 +289,4 @@ Departure verification sample:
 
 ## Hackathon Story
 
-AgentSea demonstrates how an AI agent could buy maritime decision intelligence instead of raw tracking data. Milestone 1 built the backend foundation. Milestone 2 adds a real x402 enforcement boundary on the ETA risk product without coupling payment checks to the intelligence services.
+MarineAgent demonstrates how an AI agent could buy maritime decision intelligence instead of raw tracking data. Milestone 1 built the backend foundation. Milestone 2 adds a real x402 enforcement boundary on the ETA risk product without coupling payment checks to the intelligence services, and the current demo milestone adds a truthful backend-confirmed payment path to the UI.

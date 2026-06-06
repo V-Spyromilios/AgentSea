@@ -11,6 +11,11 @@ This runbook documents the real end-to-end Algorand TestNet x402 flow for AgentS
 - Retry automatically with payment proof
 - Receive the normal ETA risk intelligence response
 
+The repo now supports two truthful demo paths that use the same funded TestNet payer:
+
+- the existing Python x402 client flow from the terminal
+- the frontend Confirm x402 Payment button, which calls a backend demo-payment endpoint that uses `AVM_PRIVATE_KEY` server-side
+
 This document is for Milestone 3 execution readiness. It does not add new product scope or change business logic.
 
 ## Prepare `.env`
@@ -176,6 +181,12 @@ AVM_PRIVATE_KEY="PAYER_PRIVATE_KEY"
 RESOURCE_URL="http://127.0.0.1:8000/v1/vessels/9321483/eta-risk?promised_eta=2026-06-09"
 ```
 
+Demo-custody note:
+
+- `AVM_PRIVATE_KEY` now powers both the Python client flow and the backend demo-payment endpoint
+- this is acceptable only for a local hackathon demo
+- do not expose the key to the frontend, and do not reuse this backend-custody pattern as a production wallet design
+
 ## Start AgentSea
 
 From the repository root:
@@ -297,6 +308,51 @@ async def main() -> None:
 asyncio.run(main())
 PY
 ```
+
+Capture these fields from the Python client for the frontend demo evidence panel:
+
+- payer address
+- transaction ID if settlement succeeds
+- any settlement or group ID printed by your client tooling
+- any payment error message if settlement fails
+
+If you have a transaction ID, you can open it in Lora TestNet with:
+
+```text
+https://lora.algokit.io/testnet/transaction/<txid>
+```
+
+## Optional Step 3: Confirm Payment From The Frontend
+
+After the UI receives a real `402` response and decodes the `payment-required` header, click `Confirm x402 Payment`.
+
+That action calls the backend demo endpoint:
+
+```text
+POST /v1/commerce/demo/pay-eta-risk
+```
+
+The backend then:
+
+1. loads `AVM_PRIVATE_KEY` server-side
+2. recreates the same x402 AVM signer flow used in the Python runbook
+3. retries the protected ETA risk request with real payment headers
+4. returns paid ETA intelligence only if the retried request actually returns `HTTP 200`
+
+If the response includes a transaction ID, verify it in Lora:
+
+```text
+https://lora.algokit.io/testnet/transaction/<txid>
+```
+
+If the frontend confirm path fails, capture:
+
+- payer address
+- transaction ID if available
+- any Lora link
+- the exact failure message
+
+You can still paste this evidence into the demo UI's manual evidence panel if needed.
 
 ## Expected Successful Response
 

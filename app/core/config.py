@@ -21,7 +21,7 @@ class Settings(BaseSettings):
         frozen=True,
     )
 
-    app_name: str = "AgentSea"
+    app_name: str = "MarineAgent"
     version: str = "0.1.0"
     project_description: str = (
         "Agent-first maritime intelligence API for structured operational decisions."

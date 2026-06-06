@@ -1,1 +1,1 @@
-"""AgentSea application package."""
+"""MarineAgent application package."""

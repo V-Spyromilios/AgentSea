@@ -1,5 +1,5 @@
 """
-Future x402 integration notes for AgentSea.
+Future x402 integration notes for MarineAgent.
 
 This module documents the broader x402 rollout that still remains after the current
 ETA-risk-only enforcement boundary. The active middleware integration for ETA risk lives in
