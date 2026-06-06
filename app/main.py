@@ -26,6 +26,13 @@ FRONTEND_DEV_ORIGINS = [
     "http://localhost:5173",
 ]
 
+EXPOSED_X402_HEADERS = [
+    PAYMENT_REQUIRED_HEADER,
+    PAYMENT_REQUIRED_HEADER.lower(),
+    PAYMENT_RESPONSE_HEADER,
+    PAYMENT_RESPONSE_HEADER.lower(),
+]
+
 
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -40,17 +47,18 @@ def create_app() -> FastAPI:
         ),
     )
 
+    register_exception_handlers(app)
+    attach_eta_risk_x402_middleware(app)
+
+    # Keep CORS outermost so browser clients can read real x402 402 responses.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=FRONTEND_DEV_ORIGINS,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=[PAYMENT_REQUIRED_HEADER, PAYMENT_RESPONSE_HEADER],
+        expose_headers=EXPOSED_X402_HEADERS,
     )
-
-    register_exception_handlers(app)
-    attach_eta_risk_x402_middleware(app)
 
     @app.get(
         "/",

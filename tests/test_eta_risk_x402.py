@@ -55,6 +55,49 @@ def test_eta_risk_returns_402_when_x402_enabled_and_unpaid(
     assert PAYMENT_REQUIRED_HEADER in response.headers
 
 
+def test_eta_risk_402_exposes_cors_headers_for_local_frontend(
+    app_client_factory,
+    monkeypatch,
+) -> None:
+    def fake_initialize(self) -> None:  # type: ignore[no-untyped-def]
+        self._initialized = True
+
+    def fake_build_payment_requirements(self, config, extensions=None):  # type: ignore[no-untyped-def]
+        return [
+            PaymentRequirements(
+                scheme="exact",
+                network=ALGORAND_TESTNET_CAIP2,
+                asset=str(USDC_TESTNET_ASA_ID),
+                amount="20000",
+                payTo=TEST_AVM_ADDRESS,
+                maxTimeoutSeconds=60,
+            )
+        ]
+
+    monkeypatch.setattr("x402.server.x402ResourceServer.initialize", fake_initialize)
+    monkeypatch.setattr(
+        "x402.server.x402ResourceServer.build_payment_requirements",
+        fake_build_payment_requirements,
+    )
+
+    client = app_client_factory(
+        X402_ENABLED="true",
+        X402_AVM_ADDRESS=TEST_AVM_ADDRESS,
+        X402_SYNC_FACILITATOR_ON_START="false",
+    )
+
+    response = client.get(
+        "/v1/vessels/9321483/eta-risk",
+        params={"promised_eta": "2026-06-09"},
+        headers={"Origin": "http://127.0.0.1:5173"},
+    )
+
+    assert response.status_code == 402
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+    exposed_headers = response.headers["access-control-expose-headers"].lower()
+    assert "payment-required" in exposed_headers
+
+
 def test_eta_risk_returns_200_when_x402_enabled_and_payment_is_verified(
     app_client_factory,
     monkeypatch,
