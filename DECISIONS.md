@@ -31,3 +31,11 @@ Only `GET /v1/vessels/{imo}/eta-risk` is payment-gated in Milestone 2. This keep
 ## Decision 8: Keep ETA Risk Business Logic Payment-Agnostic
 
 The ETA risk router and service remain responsible only for intelligence generation. x402 verification runs in commerce middleware before the route handler executes, so the business service does not know whether a request was paid.
+
+## Decision 9: Use The Official TestNet USDC Path For The First Live Demo
+
+The first real end-to-end AgentSea x402 demo should follow the official Algorand TestNet path with the hosted facilitator and TestNet USDC rather than introducing a custom asset flow early. This keeps Milestone 3 aligned with the verified x402 references already checked into the repo and reduces uncertainty before any later Quantoz-specific work.
+
+## Decision 10: Centralize Environment Loading In app/core/config.py
+
+Application configuration is now loaded from one place through Pydantic settings with `.env` support. Commerce code reads typed config objects instead of calling `os.getenv()` directly, which improves local developer setup and keeps TestNet demo configuration consistent across the app and documentation.

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
 from app.features.commerce.x402_eta_risk_middleware import attach_eta_risk_x402_middleware
 from app.features.departure_verification.router import router as departure_verification_router
@@ -21,6 +21,7 @@ ROOT_EXAMPLE = {
 
 
 def create_app() -> FastAPI:
+    settings = get_settings()
     app = FastAPI(
         title=settings.app_name,
         version=settings.version,

@@ -44,6 +44,8 @@ Future coding agents must update the following files when relevant:
 - `DOMAIN.md` for domain language and business framing.
 - `NEXT_STEPS.md` for restart guidance and roadmap shifts.
 - `README.md` for developer-facing setup or API usage changes.
+- `docs/TESTNET_DEMO.md` for any change to the real Algorand TestNet x402 demo flow, required wallets, faucet steps, or client commands.
+- `.env.example` for any change to required local configuration or TestNet demo variables.
 
 ## Official Algorand/x402 Resources
 

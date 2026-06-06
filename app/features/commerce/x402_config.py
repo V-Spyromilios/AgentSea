@@ -1,20 +1,10 @@
 from __future__ import annotations
 
-import os
-
 from pydantic import BaseModel, ConfigDict
 from x402.mechanisms.avm import ALGORAND_TESTNET_CAIP2
 
+from app.core.config import LOCAL_DEV_AVM_ADDRESS, get_settings
 from app.features.commerce.schemas import ProductPrice
-
-
-LOCAL_DEV_AVM_ADDRESS = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ"
-
-
-def _parse_bool(value: str | None, *, default: bool) -> bool:
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 class X402Settings(BaseModel):
@@ -45,17 +35,12 @@ class X402Settings(BaseModel):
 
 
 def get_x402_settings() -> X402Settings:
+    settings = get_settings()
     return X402Settings(
-        enabled=_parse_bool(os.getenv("X402_ENABLED"), default=False),
-        avm_address=os.getenv("X402_AVM_ADDRESS", LOCAL_DEV_AVM_ADDRESS),
-        facilitator_url=os.getenv(
-            "X402_FACILITATOR_URL",
-            "https://facilitator.goplausible.xyz",
-        ),
-        network=os.getenv("X402_NETWORK", ALGORAND_TESTNET_CAIP2),
-        eta_risk_price_usd=os.getenv("X402_ETA_RISK_PRICE_USD", "0.02"),
-        sync_facilitator_on_start=_parse_bool(
-            os.getenv("X402_SYNC_FACILITATOR_ON_START"),
-            default=False,
-        ),
+        enabled=settings.x402_enabled,
+        avm_address=settings.x402_avm_address,
+        facilitator_url=settings.x402_facilitator_url,
+        network=settings.x402_network,
+        eta_risk_price_usd=settings.x402_eta_risk_price_usd,
+        sync_facilitator_on_start=settings.x402_sync_facilitator_on_start,
     )

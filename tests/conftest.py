@@ -3,6 +3,7 @@ from collections.abc import Callable
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import get_settings
 from app.main import create_app
 
 
@@ -13,6 +14,8 @@ X402_ENV_KEYS = [
     "X402_NETWORK",
     "X402_ETA_RISK_PRICE_USD",
     "X402_SYNC_FACILITATOR_ON_START",
+    "AVM_PRIVATE_KEY",
+    "RESOURCE_URL",
 ]
 
 
@@ -25,6 +28,7 @@ def app_client_factory(monkeypatch: pytest.MonkeyPatch) -> Callable[..., TestCli
         for key, value in env_overrides.items():
             monkeypatch.setenv(key, str(value))
 
+        get_settings.cache_clear()
         return TestClient(create_app())
 
     return factory

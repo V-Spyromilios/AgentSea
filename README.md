@@ -57,6 +57,32 @@ source .venv/bin/activate
 pip install -e '.[dev]'
 ```
 
+## Environment Setup
+
+Create a local `.env` file from the committed example:
+
+```bash
+cp .env.example .env
+```
+
+AgentSea now loads environment variables from `.env` through the centralized settings module in [app/core/config.py](/Users/evangelos/Documents/AgentSea/app/core/config.py:1).
+
+Replace these values before a real TestNet demo:
+
+- `X402_AVM_ADDRESS` with the receiver account address
+- `AVM_PRIVATE_KEY` with the payer's Base64-encoded 64-byte private key
+
+Keep these defaults unless your demo environment requires changes:
+
+- `X402_FACILITATOR_URL`
+- `X402_NETWORK`
+- `X402_ETA_RISK_PRICE_USD`
+
+Notes:
+
+- The server does not require `AVM_PRIVATE_KEY` to start
+- `AVM_PRIVATE_KEY` and `RESOURCE_URL` are demo-client settings, not server-startup settings
+
 ## Running
 
 ```bash
@@ -97,6 +123,20 @@ With x402 enabled:
 ```bash
 pytest
 ```
+
+## Real TestNet Demo Runbook
+
+For the real Milestone 3 Algorand TestNet flow on ETA risk, use [docs/TESTNET_DEMO.md](/Users/evangelos/Documents/AgentSea/docs/TESTNET_DEMO.md:1).
+
+That runbook covers:
+
+- creating payer and receiver accounts
+- funding TestNet ALGO
+- opting into TestNet USDC
+- starting AgentSea with `X402_ENABLED=true`
+- confirming the unpaid `402` response
+- paying with the Python `x402-avm` client
+- receiving the paid ETA risk intelligence response
 
 ## curl Examples
 
