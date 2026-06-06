@@ -416,24 +416,12 @@ code {
   gap: 0.35rem;
 }
 
-.manual-evidence-details {
-  margin-top: 1rem;
-}
-
-.manual-evidence-details summary {
-  cursor: pointer;
-  color: #95d6cd;
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
 .payment-evidence-state {
   display: grid;
   gap: 0.8rem;
 }
 
-.truth-panel,
-.manual-evidence-panel {
+.truth-panel {
   margin-top: 1rem;
   padding: 1rem;
   border-radius: 1rem;

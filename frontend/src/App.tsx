@@ -80,14 +80,6 @@ type SettleResponse = {
   network: string;
 };
 
-type ManualEvidence = {
-  payerAddress: string;
-  transactionId: string;
-  settlementGroupId: string;
-  loraUrl: string;
-  paymentErrorMessage: string;
-};
-
 type PaymentMode = "manual_confirm" | "whitelist_auto_pay";
 
 type DemoPaymentEvidence = {
@@ -264,9 +256,6 @@ const demoResult: IntelligenceResponse = {
   assessment: "Supplier ETA appears unrealistic relative to the vessel's current progress.",
 };
 
-const KNOWN_FAILURE_EXAMPLE =
-  "asset 10458941 missing from OBTH43WN4M3HRNKVX5PCUW3B3MQA7WW7ISQT5VU6W6CIMNU4PX7I5H4IJA";
-
 function decodePaymentRequired(headerValue: string | null): PaymentRequired | null {
   if (!headerValue) {
     return null;
@@ -421,11 +410,6 @@ function previewJson(value: unknown): string {
   }
 }
 
-function trimOrNull(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
-}
-
 function buildLoraTransactionUrl(
   transactionId: string | null,
   explicitUrl: string | null,
@@ -575,13 +559,6 @@ function App() {
   );
   const [draftState, setDraftState] = useState<DraftActionState>({ kind: "idle" });
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
-  const [manualEvidence, setManualEvidence] = useState<ManualEvidence>({
-    payerAddress: "",
-    transactionId: "",
-    settlementGroupId: "",
-    loraUrl: "",
-    paymentErrorMessage: "",
-  });
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -763,10 +740,6 @@ function App() {
   }
 
   async function handleBuyIntelligence() {
-    setManualEvidence((current) => ({
-      ...current,
-      paymentErrorMessage: "",
-    }));
     resetActionDraftState();
     setState({ kind: "loading" });
 
@@ -924,26 +897,6 @@ function App() {
     await attemptDemoPayment(checkpoint, "manual_confirm");
   }
 
-  function handleManualEvidenceChange(
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) {
-    const { name, value } = event.target;
-    setManualEvidence((current) => ({
-      ...current,
-      [name]: value,
-    }));
-  }
-
-  function clearManualEvidence() {
-    setManualEvidence({
-      payerAddress: "",
-      transactionId: "",
-      settlementGroupId: "",
-      loraUrl: "",
-      paymentErrorMessage: "",
-    });
-  }
-
   function handleShowDemoResult() {
     if (!supplierClaim) {
       return;
@@ -1098,21 +1051,6 @@ function App() {
     state.kind === "demo" ||
     state.kind === "paying" ||
     state.kind === "payment_failed";
-  const manualFailureMessage = trimOrNull(manualEvidence.paymentErrorMessage);
-  const manualPayerAddress = trimOrNull(manualEvidence.payerAddress);
-  const manualTransactionId = trimOrNull(manualEvidence.transactionId);
-  const manualSettlementGroupId = trimOrNull(manualEvidence.settlementGroupId);
-  const manualLoraUrl = buildLoraTransactionUrl(
-    manualTransactionId,
-    trimOrNull(manualEvidence.loraUrl),
-  );
-  const hasManualFailure = manualFailureMessage !== null;
-  const hasManualSettlement =
-    !hasManualFailure && (manualTransactionId !== null || manualLoraUrl !== null);
-  const hasActiveRequestContext =
-    state.kind !== "idle" && state.kind !== "loading";
-  const showManualFailureState = hasActiveRequestContext && hasManualFailure;
-  const showManualSettlementState = hasActiveRequestContext && hasManualSettlement;
   const hasLiveSettlement =
     !liveDemoPayment &&
     liveSettlement?.success === true &&
@@ -1128,14 +1066,6 @@ function App() {
         : typeof failedDebugEvidence?.decoded_retry_payment_required?.reason === "string"
           ? failedDebugEvidence.decoded_retry_payment_required.reason
           : null;
-  const canShowDemoPreview =
-    liveCheckpointReached || showManualFailureState || showManualSettlementState;
-  const effectivePayerAddress =
-    manualPayerAddress ??
-    failedPayment?.payer_address ??
-    liveDemoPayment?.payer_address ??
-    liveSettlement?.payer ??
-    "OBTH43...H4IJA";
   const paymentStateAccept =
     displayedAccept ?? livePaymentRequired?.accepts?.[0] ?? null;
   const paymentStateHumanAmount = paymentStateAccept
@@ -1181,13 +1111,6 @@ function App() {
 
   function resetDownstreamState() {
     setState({ kind: "idle" });
-    setManualEvidence({
-      payerAddress: "",
-      transactionId: "",
-      settlementGroupId: "",
-      loraUrl: "",
-      paymentErrorMessage: "",
-    });
     resetActionDraftState();
   }
 
@@ -1207,7 +1130,7 @@ function App() {
       <section className="card-grid">
         <article className="card spotlight">
           <div className="card-header">
-            <span className="section-tag">1. Exporter Message</span>
+            <span className="section-tag">1. Message Exporter</span>
             <span className="status-pill neutral">Inbound Message</span>
           </div>
           <h2>Supplier update received</h2>
@@ -1232,7 +1155,7 @@ function App() {
             </label>
           </div>
           <label className="manual-field">
-            <span>Exporter message</span>
+            <span>message</span>
             <textarea
               className="manual-input manual-textarea"
               name="message"
@@ -1248,12 +1171,10 @@ function App() {
             disabled={isExtractingClaim}
           >
             {isExtractingClaim
-              ? "MarineAgent is extracting the supplier claim..."
-              : "Extract supplier claim"}
+              ? "MarineAgent is analyzing the message..."
+              : "Extract info"}
           </button>
-          <p className="muted extractor-note">
-            Extraction mode: deterministic demo parser.
-          </p>
+          
           {extractionError && <p className="error-copy">{extractionError}</p>}
         </article>
 
@@ -1315,7 +1236,7 @@ function App() {
           <h2>Request ETA Risk Intelligence</h2>
           <p className="muted">
             {isWhitelisted
-              ? "Matching x402 requests auto-pay."
+              ? "Agent auto-pays x402."
               : "Agent asks before paying."}
           </p>
           <button
@@ -1443,10 +1364,12 @@ function App() {
             <div className="truth-panel failure-panel">
               <span className="truth-badge failure-badge">Payment attempt failed</span>
               <h3>Payment attempt failed</h3>
-              <p className="truth-copy">Retry status: HTTP {failedDebugEvidence?.retry_status_code ?? failedPayment.status_code}</p>
-              {failedPayment.error && (
-                <p className="truth-copy">Reason: {decodedRetryError ?? failedPayment.error}</p>
-              )}
+              <p className="truth-copy">
+                Retry status: HTTP {failedDebugEvidence?.retry_status_code ?? failedPayment.status_code}
+              </p>
+              <p className="truth-copy">
+                Reason: {decodedRetryError ?? failedPayment.error ?? "Unknown payment error"}
+              </p>
               <ul className="detail-list evidence-list-compact">
                 <li>Payer: {shortenAddress(failedPayment.payer_address ?? undefined)}</li>
                 <li>
@@ -1454,61 +1377,6 @@ function App() {
                   {formatAssetCode(failedPayment.payment_evidence.asset_id)}
                 </li>
               </ul>
-              {(failedDebugEvidence?.decoded_retry_payment_required ||
-                failedDebugEvidence?.retry_payment_required_header_present ||
-                failedDebugEvidence?.retry_body ||
-                failedDebugEvidence?.payment_response_header_present) && (
-                <details className="protocol-evidence">
-                  <summary>Retry evidence</summary>
-                  {failedDebugEvidence?.decoded_retry_payment_required && (
-                    <code className="protocol-line">
-                      decoded retry payment-required:{" "}
-                      {previewJson(failedDebugEvidence.decoded_retry_payment_required)}
-                    </code>
-                  )}
-                  {failedDebugEvidence?.retry_payment_required_header_present && (
-                    <code className="protocol-line">
-                      retry payment-required:{" "}
-                      {failedDebugEvidence.retry_payment_required_header_preview ?? "present"}
-                    </code>
-                  )}
-                  {failedDebugEvidence?.payment_response_header_present && (
-                    <code className="protocol-line">
-                      payment-response:{" "}
-                      {failedDebugEvidence.payment_response_header_preview ?? "present"}
-                    </code>
-                  )}
-                  {failedDebugEvidence?.retry_body && (
-                    <code className="protocol-line">
-                      retry body: {failedDebugEvidence.retry_body}
-                    </code>
-                  )}
-                </details>
-              )}
-            </div>
-          )}
-          {showManualFailureState && (
-            <div className="truth-panel failure-panel">
-              <span className="truth-badge failure-badge">Payment attempt failed</span>
-              <h3>Payment attempt failed</h3>
-              <p className="truth-copy">
-                The x402 client attempted payment but Algorand simulation rejected
-                the transaction.
-              </p>
-              <p className="truth-copy">Reason: {manualFailureMessage}</p>
-              <ul className="detail-list evidence-list-compact">
-                <li>Payer: {shortenAddress(effectivePayerAddress ?? undefined)}</li>
-                <li>Required asset: {displayedAccept?.asset ?? TESTNET_USDC_ASSET_ID}</li>
-                <li>Required asset name: {assetName}</li>
-                <li>Required amount: {humanAmount} {assetCode}</li>
-                <li>
-                  Likely fix: fund payer with TestNet ALGO, opt into TestNet USDC,
-                  and fund payer with TestNet USDC.
-                </li>
-              </ul>
-              <p className="disclaimer truth-note">
-                This is a real TestNet validation failure, not a mocked UI state.
-              </p>
             </div>
           )}
           {hasLiveSettlement && (
@@ -1573,32 +1441,6 @@ function App() {
               )}
             </div>
           )}
-          {showManualSettlementState && (
-            <div className="truth-panel settlement-panel">
-              <span className="truth-badge settlement-badge">Manual client evidence</span>
-              <h3>PAYMENT SETTLED ON ALGORAND TESTNET</h3>
-              <ul className="detail-list evidence-list-compact">
-                {manualTransactionId && <li>Transaction ID: {manualTransactionId}</li>}
-                {manualSettlementGroupId && (
-                  <li>Settlement/group ID: {manualSettlementGroupId}</li>
-                )}
-                <li>Payer: {shortenAddress(effectivePayerAddress ?? undefined)}</li>
-              </ul>
-              {manualLoraUrl && (
-                <a
-                  className="protocol-link"
-                  href={manualLoraUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  View on Lora TestNet
-                </a>
-              )}
-              <p className="disclaimer truth-note">
-                External settlement evidence was pasted from the Python x402 client.
-              </p>
-            </div>
-          )}
           {state.kind === "live" && (
             <ul className="detail-list">
               <li>Real backend intelligence response received.</li>
@@ -1606,70 +1448,6 @@ function App() {
               <li>Displayed network: {formatNetwork(currentResult?.price.network ?? "")}</li>
             </ul>
           )}
-          <details className="manual-evidence-details">
-            <summary>Manual evidence override</summary>
-            <div className="manual-evidence-panel">
-              <div className="card-header compact-header">
-                <span className="section-tag">Optional: paste transaction evidence from the Python x402 client or Lora.</span>
-                <button className="ghost-button" onClick={clearManualEvidence} type="button">
-                  Clear
-                </button>
-              </div>
-              <div className="manual-grid">
-                <label className="manual-field">
-                  <span>Payer address</span>
-                  <input
-                    className="manual-input"
-                    name="payerAddress"
-                    value={manualEvidence.payerAddress}
-                    onChange={handleManualEvidenceChange}
-                    placeholder="OBTH43WN4M3HRNKVX5PCUW3B3MQA7WW7ISQT5VU6W6CIMNU4PX7I5H4IJA"
-                  />
-                </label>
-                <label className="manual-field">
-                  <span>Transaction ID</span>
-                  <input
-                    className="manual-input"
-                    name="transactionId"
-                    value={manualEvidence.transactionId}
-                    onChange={handleManualEvidenceChange}
-                    placeholder="Paste txid from the Python client"
-                  />
-                </label>
-                <label className="manual-field">
-                  <span>Settlement/group ID</span>
-                  <input
-                    className="manual-input"
-                    name="settlementGroupId"
-                    value={manualEvidence.settlementGroupId}
-                    onChange={handleManualEvidenceChange}
-                    placeholder="Optional group or settlement id"
-                  />
-                </label>
-                <label className="manual-field">
-                  <span>Lora URL</span>
-                  <input
-                    className="manual-input"
-                    name="loraUrl"
-                    value={manualEvidence.loraUrl}
-                    onChange={handleManualEvidenceChange}
-                    placeholder="https://lora.algokit.io/testnet/transaction/<txid>"
-                  />
-                </label>
-              </div>
-              <label className="manual-field">
-                <span>Payment error message</span>
-                <textarea
-                  className="manual-input manual-textarea"
-                  name="paymentErrorMessage"
-                  value={manualEvidence.paymentErrorMessage}
-                  onChange={handleManualEvidenceChange}
-                  placeholder={KNOWN_FAILURE_EXAMPLE}
-                  rows={3}
-                />
-              </label>
-            </div>
-          </details>
           {state.kind === "error" && (
             <p className="error-copy">{state.message}</p>
           )}
@@ -1694,18 +1472,14 @@ function App() {
           </div>
           <h2>ETA risk intelligence</h2>
           {!currentResult &&
-            !liveCheckpointReached &&
-            !showManualFailureState &&
-            !showManualSettlementState && (
+            !liveCheckpointReached && (
             <p className="muted">
               The ETA intelligence panel will populate after a successful live
               response or an explicit demo-only unlock.
             </p>
           )}
           {liveCheckpointReached &&
-            state.kind !== "payment_failed" &&
-            !showManualFailureState &&
-            !showManualSettlementState && (
+            state.kind !== "payment_failed" && (
             <div className="payment-evidence-state">
               <p className="highlight">Payment checkpoint reached.</p>
               <p className="muted">
@@ -1732,25 +1506,6 @@ function App() {
               </button>
               <p className="disclaimer">
                 Demo preview only. The HTTP 402 x402 checkpoint above is real.
-              </p>
-            </div>
-          )}
-          {showManualFailureState && (
-            <div className="payment-evidence-state">
-              <p className="highlight">Payment attempt failed.</p>
-              <p className="muted">
-                The x402 client hit a real TestNet validation error before
-                settlement completed.
-              </p>
-              <p className="muted">
-                ETA intelligence remains locked until a valid paid HTTP 200
-                response is returned.
-              </p>
-              <button className="secondary-button" onClick={handleShowDemoResult}>
-                Show demo-only intelligence preview
-              </button>
-              <p className="disclaimer">
-                Demo preview only. The failure evidence above is real.
               </p>
             </div>
           )}
@@ -1782,26 +1537,6 @@ function App() {
               </button>
               <p className="disclaimer">
                 Demo preview only. The payment failure above is real.
-              </p>
-            </div>
-          )}
-          {showManualSettlementState && !hasLiveSettlement && !currentResult && (
-            <div className="payment-evidence-state">
-              <p className="highlight">External settlement evidence captured.</p>
-              <p className="muted">
-                A real TestNet payment appears to have settled in the Python
-                x402 client, but this browser session has not yet received a
-                paid HTTP 200 intelligence response.
-              </p>
-              <p className="muted">
-                ETA intelligence remains locked here until a paid release is
-                returned in this session.
-              </p>
-              <button className="secondary-button" onClick={handleShowDemoResult}>
-                Show demo-only intelligence preview
-              </button>
-              <p className="disclaimer">
-                Demo preview only. External settlement evidence is shown above.
               </p>
             </div>
           )}

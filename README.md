@@ -158,7 +158,6 @@ Demo flow:
 - The UI can then call `POST /v1/commerce/demo/pay-eta-risk`, which uses the real backend demo payer wallet from `AVM_PRIVATE_KEY` to attempt x402 settlement and return paid ETA intelligence if the payment succeeds
 - After a real paid ETA response is released, the UI can call `POST /v1/agent-actions/warehouse-email-draft` to generate a warehouse notification draft and then call `POST /v1/agent-actions/{action_id}/approve` for demo-only human approval before manual sending
 - A local whitelist toggle can auto-confirm future ETA risk payments only when the decoded payment requirement matches the fixed demo policy
-- The payment card can also display manually pasted Python client evidence such as a real TestNet payment failure or a real transaction ID/Lora link
 - A separate demo-only button can reveal a clearly labelled preview of the paid intelligence for pitch purposes
 - That demo button does not perform payment verification and does not change backend x402 behavior
 - The warehouse email draft can be copied manually after approval, but no real email is sent by MarineAgent
