@@ -1,12 +1,7 @@
 from fastapi.testclient import TestClient
 
-from app.main import app
-
-
-client = TestClient(app)
-
-
-def test_vessel_status_returns_mock_intelligence() -> None:
+def test_vessel_status_returns_mock_intelligence(app_client_factory) -> None:
+    client = app_client_factory()
     response = client.get("/v1/vessels/9321483/status")
 
     assert response.status_code == 200

@@ -1,7 +1,7 @@
 # STATUS.md
 
-- Current milestone: Milestone 1 Foundation
-- Implemented functionality: FastAPI app scaffold, root metadata endpoint, health check, vessel status intelligence, ETA risk intelligence, port congestion intelligence, departure verification intelligence, mock commerce pricing, x402 extension stubs, OpenAPI examples, and pytest coverage for core endpoints.
-- Mocked functionality: AIS vessel data, port congestion metrics, intelligence evidence, and informational pricing for future Algorand x402 commerce.
-- Missing functionality: Real AIS integration, x402 verification, facilitator integration, Algorand transactions, authentication, persistence, billing enforcement, and production deployment concerns.
-- Immediate recommendation: Milestone 2 is real x402 payment enforcement on Algorand while preserving the current separation between commerce enforcement and intelligence business logic.
+- Current milestone: Milestone 2 x402 Enforcement on ETA Risk
+- Implemented functionality: FastAPI app scaffold, root metadata endpoint, health check, vessel status intelligence, ETA risk intelligence, port congestion intelligence, departure verification intelligence, official `x402-avm[fastapi,avm]` payment enforcement for `GET /v1/vessels/{imo}/eta-risk`, env-driven commerce configuration, OpenAPI 402 documentation for ETA risk, and pytest coverage for disabled, unpaid, paid-mocked, and unprotected-route scenarios.
+- Mocked functionality: AIS vessel data, port congestion metrics, intelligence evidence, and facilitator/network behavior in default x402 tests.
+- Missing functionality: Real AIS integration, a real funded TestNet end-to-end payment demo, broader endpoint protection, payment observability, authentication, persistence, and production deployment concerns.
+- Immediate recommendation: Run a real Algorand TestNet end-to-end x402 demo for ETA risk with funded payer and receiver accounts, then decide whether to extend enforcement to more intelligence products.

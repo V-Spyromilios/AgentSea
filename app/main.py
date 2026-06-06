@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
+from app.features.commerce.x402_eta_risk_middleware import attach_eta_risk_x402_middleware
 from app.features.departure_verification.router import router as departure_verification_router
 from app.features.eta_risk.router import router as eta_risk_router
 from app.features.health.router import router as health_router
@@ -27,11 +28,12 @@ def create_app() -> FastAPI:
         description=(
             "AgentSea sells structured maritime decision intelligence to AI agents. "
             "This milestone provides mock intelligence products, a swappable AIS provider "
-            "abstraction, and commerce extension points for a future Algorand x402 flow."
+            "abstraction, and an x402 payment enforcement boundary for ETA risk on Algorand."
         ),
     )
 
     register_exception_handlers(app)
+    attach_eta_risk_x402_middleware(app)
 
     @app.get(
         "/",

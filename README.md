@@ -10,7 +10,8 @@ It is designed around a simple idea: maritime intelligence is the product. Raw A
 - Vertical slice architecture
 - Mock AIS provider abstraction
 - Mock intelligence products for vessels and ports
-- Informational pricing fields for future x402 commerce
+- Official `x402-avm` payment enforcement on ETA risk
+- Informational pricing fields aligned with the current commerce path
 - Automated tests
 - Project operating documentation
 
@@ -23,9 +24,28 @@ The project uses vertical slice architecture under `app/features/`.
 - `eta_risk/` compares promised ETA against realistic ETA
 - `port_congestion/` returns congestion intelligence from mock port metrics
 - `departure_verification/` checks whether a supplier departure claim appears credible
-- `commerce/` contains pricing and x402-ready extension points without enforcing payment yet
+- `commerce/` contains pricing, x402 configuration, and the ETA risk payment boundary
 
 Business logic lives in services. Routers stay thin.
+
+## x402 Configuration
+
+The ETA risk endpoint can be payment-gated with these environment variables:
+
+```bash
+X402_ENABLED=false
+X402_AVM_ADDRESS=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ
+X402_FACILITATOR_URL=https://facilitator.goplausible.xyz
+X402_NETWORK=algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=
+X402_ETA_RISK_PRICE_USD=0.02
+X402_SYNC_FACILITATOR_ON_START=false
+```
+
+Notes:
+
+- `X402_ENABLED=false` keeps the entire API in Milestone 1 behavior.
+- Only `GET /v1/vessels/{imo}/eta-risk` is protected when enabled.
+- The default `X402_AVM_ADDRESS` is a safe local placeholder for unpaid-flow testing. Use a real receiver address for live TestNet verification.
 
 ## Installation
 
@@ -44,6 +64,33 @@ uvicorn app.main:app --reload
 ```
 
 The API docs will be available at `http://127.0.0.1:8000/docs`.
+
+### Running With x402 Disabled
+
+```bash
+X402_ENABLED=false uvicorn app.main:app --reload
+```
+
+All endpoints, including ETA risk, return normal Milestone 1 responses.
+
+### Running With x402 Enabled
+
+```bash
+X402_ENABLED=true \
+X402_AVM_ADDRESS=YOUR_TESTNET_RECEIVER_ADDRESS \
+X402_FACILITATOR_URL=https://facilitator.goplausible.xyz \
+X402_NETWORK=algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI= \
+X402_ETA_RISK_PRICE_USD=0.02 \
+X402_SYNC_FACILITATOR_ON_START=true \
+uvicorn app.main:app --reload
+```
+
+With x402 enabled:
+
+- Unpaid ETA risk requests return HTTP `402 Payment Required`.
+- The response includes a `PAYMENT-REQUIRED` header with the x402 requirements.
+- Retried requests with a valid `PAYMENT-SIGNATURE` continue to the existing ETA risk service.
+- Other endpoints remain unpaid.
 
 ## Testing
 
@@ -75,6 +122,12 @@ ETA risk:
 
 ```bash
 curl "http://127.0.0.1:8000/v1/vessels/9321483/eta-risk?promised_eta=2026-06-09"
+```
+
+ETA risk when x402 is enabled and unpaid:
+
+```bash
+curl -i "http://127.0.0.1:8000/v1/vessels/9321483/eta-risk?promised_eta=2026-06-09"
 ```
 
 Port congestion:
@@ -150,6 +203,4 @@ Departure verification sample:
 
 ## Hackathon Story
 
-AgentSea demonstrates how an AI agent could buy maritime decision intelligence instead of raw tracking data. The first milestone focuses on the backend foundation so the next milestone can plug in a real Algorand x402 flow without restructuring the intelligence products themselves.
-
-Milestone 2 is real x402 payment enforcement on Algorand, added as a commerce boundary without coupling payment checks to the intelligence services.
+AgentSea demonstrates how an AI agent could buy maritime decision intelligence instead of raw tracking data. Milestone 1 built the backend foundation. Milestone 2 adds a real x402 enforcement boundary on the ETA risk product without coupling payment checks to the intelligence services.

@@ -1,12 +1,7 @@
 from fastapi.testclient import TestClient
 
-from app.main import app
-
-
-client = TestClient(app)
-
-
-def test_departure_verification_flags_inconsistent_claim() -> None:
+def test_departure_verification_flags_inconsistent_claim(app_client_factory) -> None:
+    client = app_client_factory()
     response = client.get("/v1/vessels/9771940/departure-verification")
 
     assert response.status_code == 200

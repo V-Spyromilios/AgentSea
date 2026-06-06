@@ -1,12 +1,7 @@
 from fastapi.testclient import TestClient
 
-from app.main import app
-
-
-client = TestClient(app)
-
-
-def test_port_congestion_returns_high_for_hamburg() -> None:
+def test_port_congestion_returns_high_for_hamburg(app_client_factory) -> None:
+    client = app_client_factory()
     response = client.get("/v1/ports/DEHAM/congestion")
 
     assert response.status_code == 200

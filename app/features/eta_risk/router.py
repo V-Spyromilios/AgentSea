@@ -1,6 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, Query
+from x402.http.constants import PAYMENT_REQUIRED_HEADER
 
 from app.features.eta_risk.schemas import ETARiskResponse
 from app.features.eta_risk.service import ETARiskService
@@ -27,7 +28,20 @@ service = ETARiskService(provider=MockAISProvider())
                     "example": ETARiskResponse.model_config["json_schema_extra"]["example"]
                 }
             },
-        }
+        },
+        402: {
+            "description": (
+                "When x402 is enabled, unpaid ETA risk requests return HTTP 402 and include "
+                "a base64-encoded payment requirement in the PAYMENT-REQUIRED header."
+            ),
+            "headers": {
+                PAYMENT_REQUIRED_HEADER: {
+                    "description": "Base64-encoded x402 PaymentRequired payload.",
+                    "schema": {"type": "string"},
+                }
+            },
+            "content": {"application/json": {"example": {}}},
+        },
     },
 )
 def get_eta_risk(

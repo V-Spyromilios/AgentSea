@@ -30,15 +30,15 @@ Agentic Commerce means software agents can discover, buy, and consume API-delive
 
 ## x402
 
-x402 is the future payment flow planned for this project. It will eventually let an agent pay for an intelligence response through a standard commerce pattern.
+x402 is the payment protocol AgentSea now uses for ETA Risk in Milestone 2. An unpaid ETA risk request returns HTTP 402, and a paid request proceeds to the existing intelligence response.
 
 ## Algorand
 
-Algorand is the blockchain network targeted for the future payment implementation. This milestone only prepares the extension points for that integration.
+Algorand is the blockchain network used for the current ETA Risk payment enforcement boundary. The full end-to-end TestNet demo still needs funded accounts and facilitator-backed verification in a live run.
 
 ## Quantoz
 
-Quantoz EURQ and EURD are planned payment assets for future x402 flows on Algorand.
+Quantoz EURQ and EURD remain planned assets for future AgentSea commerce flows, but the current official ETA Risk x402 path is aligned with the available Algorand TestNet middleware flow.
 
 ## Core Product Principle
 

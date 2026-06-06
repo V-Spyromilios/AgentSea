@@ -31,8 +31,9 @@ AgentSea is an agent-first maritime intelligence API. The product is structured 
 - Commerce extension points live in `app/features/commerce/`.
 - Informational pricing is allowed in responses.
 - Payment verification must remain outside business services.
-- Do not block intelligence routes for payment in this milestone.
-- Real x402, facilitator, and Algorand logic belongs in a future milestone.
+- Milestone 2 protects only `GET /v1/vessels/{imo}/eta-risk` with x402.
+- Do not protect other intelligence routes unless the milestone explicitly expands scope.
+- Keep x402, facilitator, and Algorand logic isolated in the commerce feature.
 
 ## Documentation Maintenance Rules
 
@@ -48,13 +49,13 @@ Future coding agents must update the following files when relevant:
 
 Before implementing anything related to Algorand, x402, AVM, AlgoKit, TestNet, facilitator integration, wallets, or Quantoz payments, coding agents must inspect:
 
-- `skills/algorand-agent-skills/`
+- `skills/skills/algorand-agent-skills/`
 - `docs/HACKATHON_RESOURCES.md`
 
 Do not invent x402 or Algorand behavior.
 
 Use official documentation and starter templates as source of truth.
 
-For AgentSea, Milestone 2 is real x402 payment enforcement. The next priority after the mocked maritime intelligence API is:
+For AgentSea, the next verified commerce flow is:
 
 AI agent request → HTTP 402 payment requirement → Algorand x402 payment → facilitator verification → paid intelligence response.
