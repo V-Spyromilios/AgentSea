@@ -1,0 +1,109 @@
+# Python
+pycache/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Packaging
+.Python
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+.egg-info/
+.installed.cfg
+.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables / secrets
+.env
+.env.
+!.env.example
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.
+htmlcov/
+.tox/
+.nox/
+
+# Type checking
+.mypy_cache/
+.pyre/
+.pytype/
+
+# Linting
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDEs
+
+# VS Code
+.vscode/
+
+# JetBrains
+.idea/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+
+# SQLite
+*.db
+*.sqlite
+.sqlite3
+
+# FastAPI / Uvicorn
+uvicorn.log
+
+# Coverage
+coverage.xml
+
+# Build artifacts
+.tar.gz
+.whl
+
+# Local development secrets
+secrets/
+wallets/
+.pem
+.key
+
+# Algorand / x402 local files
+algokit.config.local.
+algokit.local.
+.localnet/
+testnet-wallet/
+wallet-backups/
+mnemonics.txt
+
+# Node (only if later used for x402 examples/tools)
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# OS generated files
+Thumbs.db
