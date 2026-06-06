@@ -17,7 +17,7 @@ The repo now supports two truthful demo paths that use the same funded TestNet p
 - the existing Python x402 client flow from the terminal
 - the frontend Confirm x402 Payment button, which calls a backend demo-payment endpoint that uses `AVM_PRIVATE_KEY` server-side
 
-This document is for Milestone 3 execution readiness. It does not add new product scope or change business logic.
+This document is for live demo execution readiness. It does not add new product scope or change business logic.
 
 ## Prepare `.env`
 
@@ -396,7 +396,7 @@ Representative response:
 - This runbook depends on the hosted facilitator at `https://facilitator.goplausible.xyz` being reachable and healthy
 - The repo's default x402 tests mock facilitator behavior; this runbook is the first real network-backed execution path
 - Both accounts must be funded and USDC-opted-in before the demo; the payer must hold spendable TestNet USDC
-- The current server route metadata uses a relative resource path for ETA risk; if the live facilitator or client proves to require an absolute URL, that will need a small Milestone 3 code adjustment before the demo can be considered production-ready
+- The current server route metadata uses a relative resource path for ETA risk; if the live facilitator or client proves to require an absolute URL, that will need a small future code adjustment before the demo can be considered production-ready
 - Quantoz EURQ and EURD remain out of scope for this first live TestNet demo; the official x402 path here is TestNet USDC
 
 ## References

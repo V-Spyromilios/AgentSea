@@ -2,7 +2,7 @@
 
 ## Purpose
 
-AgentSea is an agent-first maritime intelligence API. The product is structured decision intelligence for AI agents, not raw AIS coordinates or undigested telemetry.
+MarineAgent is an agent-first maritime intelligence API. The product is structured decision intelligence for AI agents, not raw AIS coordinates or undigested telemetry.
 
 ## Architecture Rules
 
@@ -32,8 +32,8 @@ AgentSea is an agent-first maritime intelligence API. The product is structured 
 - Commerce extension points live in `app/features/commerce/`.
 - Informational pricing is allowed in responses.
 - Payment verification must remain outside business services.
-- Milestone 2 protects only `GET /v1/vessels/{imo}/eta-risk` with x402.
-- Do not protect other intelligence routes unless the milestone explicitly expands scope.
+- The current product protects `GET /v1/vessels/{imo}/eta-risk` and `GET /v1/ports/{port_code}/congestion` with x402.
+- Do not protect other intelligence routes unless the product scope explicitly expands.
 - Keep x402, facilitator, and Algorand logic isolated in the commerce feature.
 
 ## Frontend Demo Rules
@@ -68,6 +68,6 @@ Do not invent x402 or Algorand behavior.
 
 Use official documentation and starter templates as source of truth.
 
-For AgentSea, the next verified commerce flow is:
+For MarineAgent, the next verified commerce flow is:
 
 AI agent request → HTTP 402 payment requirement → Algorand x402 payment → facilitator verification → paid intelligence response.

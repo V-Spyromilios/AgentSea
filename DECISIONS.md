@@ -26,7 +26,7 @@ Milestone 2 uses the official `x402-avm[fastapi,avm]` Python package, pinned to 
 
 ## Decision 7: Protect Only ETA Risk First
 
-Only `GET /v1/vessels/{imo}/eta-risk` is payment-gated in Milestone 2. This keeps the rollout narrow, limits failure blast radius, and preserves the other intelligence endpoints as free development and demo surfaces.
+The first x402 rollout protected only `GET /v1/vessels/{imo}/eta-risk`. That narrow first step limited failure blast radius and preserved the other intelligence endpoints as free development and demo surfaces before the product expanded to multi-product protection.
 
 ## Decision 8: Keep ETA Risk Business Logic Payment-Agnostic
 
@@ -34,7 +34,7 @@ The ETA risk router and service remain responsible only for intelligence generat
 
 ## Decision 9: Use The Official TestNet USDC Path For The First Live Demo
 
-The first real end-to-end MarineAgent x402 demo should follow the official Algorand TestNet path with the hosted facilitator and TestNet USDC rather than introducing a custom asset flow early. This keeps Milestone 3 aligned with the verified x402 references already checked into the repo and reduces uncertainty before any later Quantoz-specific work.
+The first real end-to-end MarineAgent x402 demo should follow the official Algorand TestNet path with the hosted facilitator and TestNet USDC rather than introducing a custom asset flow early. This keeps the live demo aligned with the verified x402 references already checked into the repo and reduces uncertainty before any later Quantoz-specific work.
 
 ## Decision 10: Centralize Environment Loading In app/core/config.py
 
