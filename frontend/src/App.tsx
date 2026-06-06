@@ -2015,7 +2015,15 @@ function App() {
         </article>
       </section>
 
-      <section className="result-grid secondary-product-grid">
+      <section className="port-product-section">
+        <div className="port-product-intro">
+          <p className="eyebrow">Second paid intelligence product</p>
+          <p className="port-product-copy">
+            Independent x402-protected port intelligence for Hamburg / DEHAM.
+          </p>
+        </div>
+
+        <div className="result-grid secondary-product-grid">
         <article className="card intelligence-card">
           <div className="card-header">
             <span className="section-tag">Second paid intelligence product</span>
@@ -2247,6 +2255,7 @@ function App() {
             </>
           )}
         </article>
+        </div>
       </section>
     </main>
   );

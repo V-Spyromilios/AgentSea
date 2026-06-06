@@ -425,6 +425,29 @@ code {
   margin-top: 1rem;
 }
 
+.port-product-section {
+  position: relative;
+  z-index: 1;
+  max-width: 1180px;
+  margin: 3.2rem auto 0;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(159, 216, 207, 0.12);
+}
+
+.port-product-intro {
+  margin: 0 auto 1.35rem;
+}
+
+.port-product-intro .eyebrow {
+  margin-bottom: 0.35rem;
+}
+
+.port-product-copy {
+  margin: 0;
+  color: #b9c6c7;
+  font-size: 0.96rem;
+}
+
 .truth-panel {
   margin-top: 1rem;
   padding: 1rem;
