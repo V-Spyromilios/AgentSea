@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from x402.http.constants import PAYMENT_REQUIRED_HEADER
 
 from app.features.port_congestion.schemas import PortCongestionResponse
 from app.features.port_congestion.service import PortCongestionService
@@ -24,7 +25,20 @@ service = PortCongestionService()
                     "example": PortCongestionResponse.model_config["json_schema_extra"]["example"]
                 }
             },
-        }
+        },
+        402: {
+            "description": (
+                "When x402 is enabled, unpaid port congestion requests return HTTP 402 and include "
+                "a base64-encoded payment requirement in the PAYMENT-REQUIRED header."
+            ),
+            "headers": {
+                PAYMENT_REQUIRED_HEADER: {
+                    "description": "Base64-encoded x402 PaymentRequired payload.",
+                    "schema": {"type": "string"},
+                }
+            },
+            "content": {"application/json": {"example": {}}},
+        },
     },
 )
 def get_port_congestion(port_code: str) -> PortCongestionResponse:

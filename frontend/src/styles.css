@@ -421,6 +421,10 @@ code {
   gap: 0.8rem;
 }
 
+.section-spacer {
+  margin-top: 1rem;
+}
+
 .truth-panel {
   margin-top: 1rem;
   padding: 1rem;

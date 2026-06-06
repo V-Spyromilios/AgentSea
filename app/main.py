@@ -6,7 +6,7 @@ from app.core.config import get_settings
 from app.features.agent_actions.router import router as agent_actions_router
 from app.core.errors import register_exception_handlers
 from app.features.commerce.router import router as commerce_router
-from app.features.commerce.x402_eta_risk_middleware import attach_eta_risk_x402_middleware
+from app.features.commerce.x402_eta_risk_middleware import attach_commerce_x402_middleware
 from app.features.departure_verification.router import router as departure_verification_router
 from app.features.eta_risk.router import router as eta_risk_router
 from app.features.health.router import router as health_router
@@ -46,12 +46,12 @@ def create_app() -> FastAPI:
         description=(
             "MarineAgent sells structured maritime decision intelligence to AI agents. "
             "This milestone provides mock intelligence products, a swappable AIS provider "
-            "abstraction, and an x402 payment enforcement boundary for ETA risk on Algorand."
+            "abstraction, and x402 payment enforcement boundaries for ETA risk and port congestion on Algorand."
         ),
     )
 
     register_exception_handlers(app)
-    attach_eta_risk_x402_middleware(app)
+    attach_commerce_x402_middleware(app)
 
     # Keep CORS outermost so browser clients can read real x402 402 responses.
     app.add_middleware(

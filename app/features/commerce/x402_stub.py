@@ -2,7 +2,7 @@
 Future x402 integration notes for MarineAgent.
 
 This module documents the broader x402 rollout that still remains after the current
-ETA-risk-only enforcement boundary. The active middleware integration for ETA risk lives in
+ETA-risk and port-congestion enforcement boundaries. The active middleware integration lives in
 `x402_eta_risk_middleware.py`.
 
 This file still exists to document the interfaces and operational decisions we expect to add in
@@ -15,8 +15,9 @@ future milestones:
 - Quantoz EURQ and EURD stablecoins as payment assets
 
 The business intelligence services must stay callable without payment verification so we can
-keep domain logic isolated from commerce concerns. The current ETA-risk payment gate follows
-that rule by validating payment in HTTP middleware before the business service executes.
+keep domain logic isolated from commerce concerns. The current ETA-risk and port-congestion
+payment gates follow that rule by validating payment in HTTP middleware before the business
+service executes.
 """
 
 from pydantic import BaseModel, ConfigDict

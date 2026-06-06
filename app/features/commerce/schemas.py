@@ -27,7 +27,7 @@ class FuturePaymentRequirement(BaseModel):
     network: str
 
 
-class DemoPayEtaRiskRequest(BaseModel):
+class DemoPaymentRequest(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -65,7 +65,7 @@ class DemoPaymentDebugEvidence(BaseModel):
     payment_response_header_preview: str | None = None
 
 
-class DemoPayEtaRiskResponse(BaseModel):
+class DemoPaymentResponse(BaseModel):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -103,3 +103,7 @@ class DemoPayEtaRiskResponse(BaseModel):
     error: str | None = None
     payment_evidence: DemoPaymentEvidence
     debug_evidence: DemoPaymentDebugEvidence | None = None
+
+
+DemoPayEtaRiskRequest = DemoPaymentRequest
+DemoPayEtaRiskResponse = DemoPaymentResponse

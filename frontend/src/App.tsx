@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 const API_BASE_URL =
   import.meta.env.VITE_AGENTSEA_API_BASE_URL ?? "http://127.0.0.1:8000";
 const DEMO_PAYMENT_URL = `${API_BASE_URL}/v1/commerce/demo/pay-eta-risk`;
+const DEMO_PORT_CONGESTION_PAYMENT_URL = `${API_BASE_URL}/v1/commerce/demo/pay-port-congestion`;
 const WAREHOUSE_DRAFT_URL = `${API_BASE_URL}/v1/agent-actions/warehouse-email-draft`;
 const MESSAGE_EXTRACTION_URL = `${API_BASE_URL}/v1/message-extraction/supplier-claim`;
 const ALGOD_TESTNET_CAIP2 = "algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=";
@@ -14,6 +15,8 @@ const HAMBURG_VESSEL_NAME = "Hamburg Trader";
 const DEFAULT_IMO = "9321483";
 const DEFAULT_ROUTE_CONTEXT = "Asia → Hamburg";
 const DEFAULT_PROMISED_ETA = "2026-06-09";
+const DEFAULT_PORT_CODE = "DEHAM";
+const DEFAULT_PORT_NAME = "Hamburg";
 const DEFAULT_EXPORTER_MESSAGE = `Hi Hamburg Cargo team,
 
 Hamburg Trader is still expected to arrive in Hamburg by 2026-06-09.
@@ -44,6 +47,26 @@ type IntelligenceResponse = {
   promised_eta: string;
   realistic_eta: string;
   risk_level: RiskLevel;
+  assessment: string;
+};
+
+type PortCongestionResponse = {
+  product: string;
+  mock_data: boolean;
+  generated_at: string;
+  confidence: number;
+  evidence: EvidenceItem[];
+  price: {
+    asset: string;
+    amount: string;
+    network: string;
+  };
+  port_code: string;
+  port_name: string;
+  congestion_level: RiskLevel;
+  average_delay_hours: number;
+  waiting_vessels: number;
+  berth_utilization: number;
   assessment: string;
 };
 
@@ -229,6 +252,41 @@ type FetchState =
     }
   | { kind: "error"; message: string };
 
+type PortFlowState =
+  | { kind: "idle" }
+  | { kind: "loading" }
+  | {
+      kind: "unpaid";
+      statusCode: number;
+      headerPresent: boolean;
+      rawHeaderValue: string | null;
+      paymentRequired: PaymentRequired | null;
+    }
+  | {
+      kind: "paying";
+      statusCode: number;
+      headerPresent: boolean;
+      rawHeaderValue: string | null;
+      paymentRequired: PaymentRequired | null;
+    }
+  | {
+      kind: "payment_failed";
+      statusCode: number;
+      headerPresent: boolean;
+      rawHeaderValue: string | null;
+      paymentRequired: PaymentRequired | null;
+      paymentFailure: DemoPaymentResponse;
+    }
+  | {
+      kind: "live";
+      result: PortCongestionResponse;
+      rawSettleHeaderValue: string | null;
+      settleResponse: SettleResponse | null;
+      demoPayment: DemoPaymentResponse | null;
+      paymentRequired: PaymentRequired | null;
+    }
+  | { kind: "error"; message: string };
+
 const demoResult: IntelligenceResponse = {
   product: "eta-risk",
   mock_data: true,
@@ -291,6 +349,10 @@ function buildEtaRiskUrl(claim: SupplierClaim): string {
     promised_eta: claim.supplierPromisedEta,
   });
   return `${API_BASE_URL}/v1/vessels/${claim.vesselImo}/eta-risk?${params.toString()}`;
+}
+
+function buildPortCongestionUrl(portCode: string): string {
+  return `${API_BASE_URL}/v1/ports/${portCode}/congestion`;
 }
 
 function defaultSupplierClaim(): SupplierClaim {
@@ -421,6 +483,10 @@ function buildLoraTransactionUrl(
     return null;
   }
   return `https://lora.algokit.io/testnet/transaction/${transactionId}`;
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(value * 100)}%`;
 }
 
 function getDelayDays(result: IntelligenceResponse): number {
@@ -557,6 +623,7 @@ function App() {
   const [isWhitelisted, setIsWhitelisted] = useState<boolean>(() =>
     loadWhitelistPreference(),
   );
+  const [portState, setPortState] = useState<PortFlowState>({ kind: "idle" });
   const [draftState, setDraftState] = useState<DraftActionState>({ kind: "idle" });
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
@@ -581,6 +648,10 @@ function App() {
   const etaRiskUrl = useMemo(
     () => (supplierClaim ? buildEtaRiskUrl(supplierClaim) : ""),
     [supplierClaim],
+  );
+  const portCongestionUrl = useMemo(
+    () => buildPortCongestionUrl(DEFAULT_PORT_CODE),
+    [],
   );
 
   const paymentRequired =
@@ -739,6 +810,121 @@ function App() {
     }
   }
 
+  async function attemptPortCongestionPayment(
+    checkpoint: Extract<
+      PortFlowState,
+      { kind: "unpaid" } | { kind: "paying" } | { kind: "payment_failed" }
+    >,
+  ) {
+    setPortState({
+      kind: "paying",
+      statusCode: checkpoint.statusCode,
+      headerPresent: checkpoint.headerPresent,
+      rawHeaderValue: checkpoint.rawHeaderValue,
+      paymentRequired: checkpoint.paymentRequired,
+    });
+
+    try {
+      const response = await fetch(DEMO_PORT_CONGESTION_PAYMENT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          resource_url: portCongestionUrl,
+          mode: "manual_confirm",
+        }),
+      });
+
+      if (!response.ok) {
+        const message = await parseErrorMessage(response);
+        setPortState({
+          kind: "payment_failed",
+          statusCode: checkpoint.statusCode,
+          headerPresent: checkpoint.headerPresent,
+          rawHeaderValue: checkpoint.rawHeaderValue,
+          paymentRequired: checkpoint.paymentRequired,
+          paymentFailure: {
+            paid: false,
+            status_code: response.status,
+            payer_address: null,
+            resource_url: portCongestionUrl,
+            mode: "manual_confirm",
+            intelligence: null,
+            error: message,
+            payment_evidence: {
+              network: "Algorand TestNet",
+              asset_id: TESTNET_USDC_ASSET_ID,
+              amount: "0.02",
+              asset_label: "TestNet USDC",
+              transaction_id: null,
+              group_id: null,
+              lora_url: null,
+              raw_payment_response_header: null,
+              note: null,
+            },
+          },
+        });
+        return;
+      }
+
+      const result = (await response.json()) as DemoPaymentResponse;
+
+      if (!result.paid || !result.intelligence) {
+        setPortState({
+          kind: "payment_failed",
+          statusCode: checkpoint.statusCode,
+          headerPresent: checkpoint.headerPresent,
+          rawHeaderValue: checkpoint.rawHeaderValue,
+          paymentRequired: checkpoint.paymentRequired,
+          paymentFailure: result,
+        });
+        return;
+      }
+
+      const settleHeader = result.payment_evidence.raw_payment_response_header;
+      setPortState({
+        kind: "live",
+        result: result.intelligence as unknown as PortCongestionResponse,
+        rawSettleHeaderValue: settleHeader,
+        settleResponse: decodePaymentResponse(settleHeader),
+        demoPayment: result,
+        paymentRequired: checkpoint.paymentRequired,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown payment network error";
+      setPortState({
+        kind: "payment_failed",
+        statusCode: checkpoint.statusCode,
+        headerPresent: checkpoint.headerPresent,
+        rawHeaderValue: checkpoint.rawHeaderValue,
+        paymentRequired: checkpoint.paymentRequired,
+        paymentFailure: {
+          paid: false,
+          status_code: 500,
+          payer_address: null,
+          resource_url: portCongestionUrl,
+          mode: "manual_confirm",
+          intelligence: null,
+          error: message,
+          payment_evidence: {
+            network: "Algorand TestNet",
+            asset_id: TESTNET_USDC_ASSET_ID,
+            amount: "0.02",
+            asset_label: "TestNet USDC",
+            transaction_id: null,
+            group_id: null,
+            lora_url: null,
+            raw_payment_response_header: null,
+            note: null,
+          },
+        },
+      });
+    }
+  }
+
   async function handleBuyIntelligence() {
     resetActionDraftState();
     setState({ kind: "loading" });
@@ -798,6 +984,57 @@ function App() {
       const message =
         error instanceof Error ? error.message : "Unknown network error";
       setState({
+        kind: "error",
+        message: `Frontend could not reach MarineAgent: ${message}`,
+      });
+    }
+  }
+
+  async function handleRequestPortCongestion() {
+    setPortState({ kind: "loading" });
+
+    try {
+      const response = await fetch(portCongestionUrl, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (response.status === 402) {
+        const header = response.headers.get("PAYMENT-REQUIRED");
+        setPortState({
+          kind: "unpaid",
+          statusCode: response.status,
+          headerPresent: header !== null,
+          rawHeaderValue: header,
+          paymentRequired: decodePaymentRequired(header),
+        });
+        return;
+      }
+
+      if (!response.ok) {
+        setPortState({
+          kind: "error",
+          message: `MarineAgent returned ${response.status}.`,
+        });
+        return;
+      }
+
+      const data = (await response.json()) as PortCongestionResponse;
+      const settleHeader = response.headers.get("PAYMENT-RESPONSE");
+      setPortState({
+        kind: "live",
+        result: data,
+        rawSettleHeaderValue: settleHeader,
+        settleResponse: decodePaymentResponse(settleHeader),
+        demoPayment: null,
+        paymentRequired: null,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown network error";
+      setPortState({
         kind: "error",
         message: `Frontend could not reach MarineAgent: ${message}`,
       });
@@ -895,6 +1132,17 @@ function App() {
         : state;
 
     await attemptDemoPayment(checkpoint, "manual_confirm");
+  }
+
+  async function handleConfirmPortCongestionPayment() {
+    if (
+      portState.kind !== "unpaid" &&
+      portState.kind !== "payment_failed"
+    ) {
+      return;
+    }
+
+    await attemptPortCongestionPayment(portState);
   }
 
   function handleShowDemoResult() {
@@ -1096,6 +1344,46 @@ function App() {
     draftState.kind === "rejected"
       ? draftState.draft
       : null;
+  const portPaymentRequired =
+    portState.kind === "unpaid" ||
+    portState.kind === "paying" ||
+    portState.kind === "payment_failed"
+      ? portState.paymentRequired
+      : portState.kind === "live"
+        ? portState.paymentRequired
+        : null;
+  const portRawHeaderValue =
+    portState.kind === "unpaid" ||
+    portState.kind === "paying" ||
+    portState.kind === "payment_failed"
+      ? portState.rawHeaderValue
+      : null;
+  const portDisplayedAccept = portPaymentRequired?.accepts?.[0] ?? null;
+  const portHumanAmount = portDisplayedAccept
+    ? formatAmount(
+        portDisplayedAccept.amount,
+        portDisplayedAccept.extra?.decimals,
+        portDisplayedAccept.asset,
+      )
+    : "0.02";
+  const portAssetCode = formatAssetCode(
+    portDisplayedAccept?.asset ?? TESTNET_USDC_ASSET_ID,
+  );
+  const portAssetName = formatAssetName(
+    portDisplayedAccept?.asset ?? TESTNET_USDC_ASSET_ID,
+  );
+  const portReceiver = shortenAddress(portDisplayedAccept?.payTo);
+  const portFailedPayment =
+    portState.kind === "payment_failed" ? portState.paymentFailure : null;
+  const portFailedDebugEvidence = portFailedPayment?.debug_evidence ?? null;
+  const portDecodedRetryError =
+    typeof portFailedDebugEvidence?.decoded_retry_payment_required?.error === "string"
+      ? portFailedDebugEvidence.decoded_retry_payment_required.error
+      : typeof portFailedDebugEvidence?.decoded_retry_payment_required?.message === "string"
+        ? portFailedDebugEvidence.decoded_retry_payment_required.message
+        : typeof portFailedDebugEvidence?.decoded_retry_payment_required?.reason === "string"
+          ? portFailedDebugEvidence.decoded_retry_payment_required.reason
+          : null;
 
   useEffect(() => {
     if (!canDraftWarehouseEmail) {
@@ -1722,6 +2010,240 @@ function App() {
                   Warehouse drafting is disabled for demo-only preview output. A real paid ETA intelligence release is required.
                 </p>
               )}
+            </>
+          )}
+        </article>
+      </section>
+
+      <section className="result-grid secondary-product-grid">
+        <article className="card intelligence-card">
+          <div className="card-header">
+            <span className="section-tag">Second paid intelligence product</span>
+            <span
+              className={`status-pill ${
+                portState.kind === "live"
+                  ? "real"
+                  : portState.kind === "unpaid" ||
+                      portState.kind === "paying" ||
+                      portState.kind === "payment_failed"
+                    ? "warn"
+                    : "neutral"
+              }`}
+            >
+              {portState.kind === "live"
+                ? "Live access"
+                : portState.kind === "unpaid" ||
+                    portState.kind === "paying" ||
+                    portState.kind === "payment_failed"
+                  ? "Live x402 checkpoint"
+                  : "Waiting"}
+            </span>
+          </div>
+          <h2>Port Congestion Intelligence</h2>
+          <p className="muted">Port: {DEFAULT_PORT_NAME} / {DEFAULT_PORT_CODE}</p>
+          <button
+            className="primary-button"
+            onClick={handleRequestPortCongestion}
+            disabled={portState.kind === "loading" || portState.kind === "paying"}
+          >
+            {portState.kind === "loading"
+              ? "Requesting MarineAgent intelligence..."
+              : "Request Port Congestion Intelligence"}
+          </button>
+          <div className="request-meta">
+            <span className="request-label">Live backend endpoint</span>
+            <code className="request-line">GET {portCongestionUrl}</code>
+          </div>
+
+          {portState.kind === "idle" && (
+            <div className="payment-empty-state section-spacer">
+              <p className="highlight">Payment: waiting for request</p>
+              <p className="muted">
+                Request port congestion intelligence to trigger an independent x402 checkpoint.
+              </p>
+            </div>
+          )}
+          {portState.kind === "loading" && (
+            <p className="muted section-spacer">
+              MarineAgent is evaluating the port congestion request and may return
+              live intelligence or an x402 paywall requirement.
+            </p>
+          )}
+          {(portState.kind === "unpaid" ||
+            portState.kind === "paying" ||
+            portState.kind === "payment_failed") && (
+            <div className="section-spacer">
+              <div className="checkpoint-banner">
+                <span className="checkpoint-badge">Real HTTP 402</span>
+                <div className="checkpoint-copy">
+                  <strong>x402 Payment Required</strong>
+                  <p>HTTP 402 checkpoint reached.</p>
+                </div>
+              </div>
+              <p className="highlight">No port congestion intelligence was released.</p>
+              <ul className="detail-list evidence-list-compact">
+                <li>
+                  Network: {formatNetwork(
+                    portDisplayedAccept?.network ?? ALGOD_TESTNET_CAIP2,
+                    portDisplayedAccept?.extra?.genesisId,
+                  )}
+                </li>
+                <li>Asset: {portAssetName}</li>
+                <li>Amount: {portHumanAmount} {portAssetCode}</li>
+                <li>Receiver: {portReceiver}</li>
+              </ul>
+              {portState.kind !== "paying" && (
+                <button
+                  className="secondary-button"
+                  onClick={handleConfirmPortCongestionPayment}
+                  type="button"
+                >
+                  Confirm x402 Payment
+                </button>
+              )}
+              {portState.kind === "paying" && (
+                <div className="truth-panel">
+                  <span className="truth-badge settlement-badge">Payment in progress</span>
+                  <h3>Hamburg Cargo agent is authorizing x402 payment...</h3>
+                  <p className="truth-copy">
+                    The backend demo payer is attempting a real Algorand TestNet
+                    settlement for this exact port congestion requirement.
+                  </p>
+                </div>
+              )}
+              <details className="protocol-evidence">
+                <summary>Protocol evidence</summary>
+                <code className="protocol-line">
+                  payment-required: {previewHeader(portRawHeaderValue)}
+                </code>
+              </details>
+            </div>
+          )}
+          {portFailedPayment && (
+            <div className="truth-panel failure-panel section-spacer">
+              <span className="truth-badge failure-badge">Payment attempt failed</span>
+              <h3>Payment attempt failed</h3>
+              <p className="truth-copy">
+                Retry status: HTTP {portFailedDebugEvidence?.retry_status_code ?? portFailedPayment.status_code}
+              </p>
+              <p className="truth-copy">
+                Reason: {portDecodedRetryError ?? portFailedPayment.error ?? "Unknown payment error"}
+              </p>
+              <ul className="detail-list evidence-list-compact">
+                <li>Payer: {shortenAddress(portFailedPayment.payer_address ?? undefined)}</li>
+                <li>
+                  Required: {portFailedPayment.payment_evidence.amount}{" "}
+                  {formatAssetCode(portFailedPayment.payment_evidence.asset_id)}
+                </li>
+              </ul>
+              <details className="protocol-evidence">
+                <summary>Retry evidence</summary>
+                <code className="protocol-line">
+                  retry payment-required: {previewJson(portFailedDebugEvidence?.decoded_retry_payment_required)}
+                </code>
+              </details>
+            </div>
+          )}
+          {portState.kind === "live" && (
+            <div className="truth-panel settlement-panel section-spacer">
+              <span className="truth-badge settlement-badge">Backend demo payer</span>
+              <h3>Payment settled</h3>
+              <p className="truth-copy">Port congestion intelligence released.</p>
+              <ul className="detail-list evidence-list-compact">
+                <li>
+                  Payer: {shortenAddress(
+                    portState.demoPayment?.payer_address ??
+                      portState.settleResponse?.payer ??
+                      undefined,
+                  )}
+                </li>
+                <li>Receiver: {portReceiver}</li>
+                <li>Amount: {portHumanAmount} {portAssetCode}</li>
+                {portState.demoPayment?.payment_evidence.transaction_id && (
+                  <li>Transaction ID: {portState.demoPayment.payment_evidence.transaction_id}</li>
+                )}
+                {!portState.demoPayment?.payment_evidence.transaction_id &&
+                  portState.settleResponse?.transaction && (
+                    <li>Transaction ID: {portState.settleResponse.transaction}</li>
+                  )}
+              </ul>
+              {buildLoraTransactionUrl(
+                portState.demoPayment?.payment_evidence.transaction_id ??
+                  portState.settleResponse?.transaction ??
+                  null,
+                portState.demoPayment?.payment_evidence.lora_url ?? null,
+              ) && (
+                <a
+                  className="protocol-link"
+                  href={
+                    buildLoraTransactionUrl(
+                      portState.demoPayment?.payment_evidence.transaction_id ??
+                        portState.settleResponse?.transaction ??
+                        null,
+                      portState.demoPayment?.payment_evidence.lora_url ?? null,
+                    ) ?? "#"
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  View transaction in Lora
+                </a>
+              )}
+              {portState.demoPayment?.payment_evidence.note && (
+                <p className="truth-note">{portState.demoPayment.payment_evidence.note}</p>
+              )}
+            </div>
+          )}
+          {portState.kind === "error" && (
+            <p className="error-copy section-spacer">{portState.message}</p>
+          )}
+        </article>
+
+        <article className="card decision-card">
+          <div className="card-header">
+            <span className="section-tag">Port congestion result</span>
+            <span
+              className={`status-pill ${
+                portState.kind === "live" ? "real" : "neutral"
+              }`}
+            >
+              {portState.kind === "live" ? "Live Backend Response" : "No Result Yet"}
+            </span>
+          </div>
+          <h2>Hamburg congestion assessment</h2>
+          {portState.kind !== "live" && (
+            <p className="muted">
+              This second product remains independent from the ETA workflow and only
+              appears after its own paid request succeeds.
+            </p>
+          )}
+          {portState.kind === "live" && (
+            <>
+              <div className="metric-row">
+                <div className="metric-card">
+                  <span>Congestion</span>
+                  <strong className={`risk-${portState.result.congestion_level}`}>
+                    {portState.result.congestion_level}
+                  </strong>
+                </div>
+                <div className="metric-card">
+                  <span>Average delay</span>
+                  <strong>{portState.result.average_delay_hours}h</strong>
+                </div>
+                <div className="metric-card">
+                  <span>Waiting vessels</span>
+                  <strong>{portState.result.waiting_vessels}</strong>
+                </div>
+              </div>
+              <div className="decision-meta">
+                <span>Port</span>
+                <strong>{portState.result.port_name} / {portState.result.port_code}</strong>
+              </div>
+              <div className="decision-meta">
+                <span>Berth utilization</span>
+                <strong>{formatPercent(portState.result.berth_utilization)}</strong>
+              </div>
+              <p className="assessment">{portState.result.assessment}</p>
             </>
           )}
         </article>

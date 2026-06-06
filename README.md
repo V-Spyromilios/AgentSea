@@ -12,7 +12,7 @@ The repo now also includes a small Hamburg Cargo frontend demo in `frontend/` fo
 - Vertical slice architecture
 - Mock AIS provider abstraction
 - Mock intelligence products for vessels and ports
-- Official `x402-avm` payment enforcement on ETA risk
+- Official `x402-avm` payment enforcement on ETA risk and port congestion
 - Informational pricing fields aligned with the current commerce path
 - Automated tests
 - Project operating documentation
@@ -26,17 +26,17 @@ The project uses vertical slice architecture under `app/features/`.
 - `eta_risk/` compares promised ETA against realistic ETA
 - `port_congestion/` returns congestion intelligence from mock port metrics
 - `departure_verification/` checks whether a supplier departure claim appears credible
-- `commerce/` contains pricing, x402 configuration, and the ETA risk payment boundary
+- `commerce/` contains pricing, x402 configuration, and the paid-product payment boundaries
 - `agent_actions/` creates downstream operational drafts such as warehouse email notifications that still require human approval
 - `message_extraction/` converts exporter messages into structured supplier claims that drive the ETA-risk request
 
 Business logic lives in services. Routers stay thin.
 
-For demo polish, `frontend/` contains a thin Vite + React + TypeScript single-page experience that calls the existing ETA risk endpoint without changing backend business logic.
+For demo polish, `frontend/` contains a thin Vite + React + TypeScript single-page experience that calls the existing ETA risk and port congestion endpoints without changing backend business logic.
 
 ## x402 Configuration
 
-The ETA risk endpoint can be payment-gated with these environment variables:
+The paid-product endpoints can be payment-gated with these environment variables:
 
 ```bash
 X402_ENABLED=false
@@ -44,13 +44,14 @@ X402_AVM_ADDRESS=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ
 X402_FACILITATOR_URL=https://facilitator.goplausible.xyz
 X402_NETWORK=algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=
 X402_ETA_RISK_PRICE_USD=0.02
+X402_PORT_CONGESTION_PRICE_USD=0.02
 X402_SYNC_FACILITATOR_ON_START=false
 ```
 
 Notes:
 
 - `X402_ENABLED=false` keeps the entire API in Milestone 1 behavior.
-- Only `GET /v1/vessels/{imo}/eta-risk` is protected when enabled.
+- `GET /v1/vessels/{imo}/eta-risk` and `GET /v1/ports/{port_code}/congestion` are protected when enabled.
 - The default `X402_AVM_ADDRESS` is a safe local placeholder for unpaid-flow testing. Use a real receiver address for live TestNet verification.
 
 ## Installation
@@ -83,6 +84,7 @@ Keep these defaults unless your demo environment requires changes:
 - `X402_FACILITATOR_URL`
 - `X402_NETWORK`
 - `X402_ETA_RISK_PRICE_USD`
+- `X402_PORT_CONGESTION_PRICE_USD`
 
 Notes:
 
@@ -104,7 +106,7 @@ The API docs will be available at `http://127.0.0.1:8000/docs`.
 X402_ENABLED=false uvicorn app.main:app --reload
 ```
 
-All endpoints, including ETA risk, return normal Milestone 1 responses.
+All endpoints, including ETA risk and port congestion, return normal Milestone 1 responses.
 
 ### Running With x402 Enabled
 
@@ -120,9 +122,9 @@ uvicorn app.main:app --reload
 
 With x402 enabled:
 
-- Unpaid ETA risk requests return HTTP `402 Payment Required`.
+- Unpaid ETA risk and port congestion requests return HTTP `402 Payment Required`.
 - The response includes a `PAYMENT-REQUIRED` header with the x402 requirements.
-- Retried requests with a valid `PAYMENT-SIGNATURE` continue to the existing ETA risk service.
+- Retried requests with a valid `PAYMENT-SIGNATURE` continue to the existing product service.
 - Other endpoints remain unpaid.
 
 ## Frontend Demo
@@ -156,6 +158,7 @@ Demo flow:
 - The frontend then makes a real request to `GET /v1/vessels/9321483/eta-risk?promised_eta=...`
 - If the backend returns `402`, the UI shows a real paywall state and decoded `PAYMENT-REQUIRED` header evidence
 - The UI can then call `POST /v1/commerce/demo/pay-eta-risk`, which uses the real backend demo payer wallet from `AVM_PRIVATE_KEY` to attempt x402 settlement and return paid ETA intelligence if the payment succeeds
+- The frontend also includes an independent port congestion purchase flow for `GET /v1/ports/DEHAM/congestion` and can call `POST /v1/commerce/demo/pay-port-congestion` after a real `402`
 - After a real paid ETA response is released, the UI can call `POST /v1/agent-actions/warehouse-email-draft` to generate a warehouse notification draft and then call `POST /v1/agent-actions/{action_id}/approve` for demo-only human approval before manual sending
 - A local whitelist toggle can auto-confirm future ETA risk payments only when the decoded payment requirement matches the fixed demo policy
 - A separate demo-only button can reveal a clearly labelled preview of the paid intelligence for pitch purposes
@@ -177,18 +180,19 @@ pytest
 
 ## Real TestNet Demo Runbook
 
-For the real Milestone 3 Algorand TestNet flow on ETA risk, use [docs/TESTNET_DEMO.md](/Users/evangelos/Documents/AgentSea/docs/TESTNET_DEMO.md:1).
+For the real Milestone 3 Algorand TestNet flow, use [docs/TESTNET_DEMO.md](/Users/evangelos/Documents/AgentSea/docs/TESTNET_DEMO.md:1).
 
 That runbook covers:
 
 - creating payer and receiver accounts
 - funding TestNet ALGO
 - opting into TestNet USDC
-- starting AgentSea with `X402_ENABLED=true`
+- starting MarineAgent with `X402_ENABLED=true`
 - confirming the unpaid `402` response
 - using the frontend Confirm x402 Payment button and the backend demo payer endpoint
 - paying with the Python `x402-avm` client
 - receiving the paid ETA risk intelligence response
+- verifying that port congestion is now a second independent protected product
 
 ## curl Examples
 
@@ -256,6 +260,12 @@ Port congestion:
 
 ```bash
 curl http://127.0.0.1:8000/v1/ports/DEHAM/congestion
+```
+
+Port congestion when x402 is enabled and unpaid:
+
+```bash
+curl -i http://127.0.0.1:8000/v1/ports/DEHAM/congestion
 ```
 
 Departure verification:
@@ -326,3 +336,7 @@ Departure verification sample:
 ## Hackathon Story
 
 MarineAgent demonstrates how an AI agent could buy maritime decision intelligence instead of raw tracking data. Milestone 1 built the backend foundation. Milestone 2 adds a real x402 enforcement boundary on the ETA risk product without coupling payment checks to the intelligence services, and the current demo milestone adds a truthful backend-confirmed payment path to the UI.
+
+Current demo note:
+
+Current demo port congestion uses deterministic mock data. Future provider adapters can replace the mock provider with HVCC Hamburg port-call data, commercial port congestion APIs, AIS-derived port-arrival data, or DCSA Port Call compatible event feeds.

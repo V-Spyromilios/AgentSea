@@ -22,7 +22,7 @@ Responses include price metadata now, but business services do not enforce payme
 
 ## Decision 6: Use Official x402-avm Middleware for Milestone 2
 
-Milestone 2 uses the official `x402-avm[fastapi,avm]` Python package, pinned to version `2.0.2`, instead of a custom payment protocol implementation. This keeps AgentSea aligned with the published Algorand x402 flow and avoids inventing facilitator behavior.
+Milestone 2 uses the official `x402-avm[fastapi,avm]` Python package, pinned to version `2.0.2`, instead of a custom payment protocol implementation. This keeps MarineAgent aligned with the published Algorand x402 flow and avoids inventing facilitator behavior.
 
 ## Decision 7: Protect Only ETA Risk First
 
@@ -34,7 +34,7 @@ The ETA risk router and service remain responsible only for intelligence generat
 
 ## Decision 9: Use The Official TestNet USDC Path For The First Live Demo
 
-The first real end-to-end AgentSea x402 demo should follow the official Algorand TestNet path with the hosted facilitator and TestNet USDC rather than introducing a custom asset flow early. This keeps Milestone 3 aligned with the verified x402 references already checked into the repo and reduces uncertainty before any later Quantoz-specific work.
+The first real end-to-end MarineAgent x402 demo should follow the official Algorand TestNet path with the hosted facilitator and TestNet USDC rather than introducing a custom asset flow early. This keeps Milestone 3 aligned with the verified x402 references already checked into the repo and reduces uncertainty before any later Quantoz-specific work.
 
 ## Decision 10: Centralize Environment Loading In app/core/config.py
 
@@ -55,3 +55,7 @@ Warehouse email actions are downstream operational drafts produced from paid ETA
 ## Decision 14: Use Deterministic Supplier Claim Extraction For The Hackathon Demo
 
 Supplier message extraction now uses deterministic parsing for IMO, route, and promised ETA before the paid ETA-risk flow begins. This keeps the live x402 demo reliable without introducing an OpenAI dependency that could fail at pitch time, while preserving a clean future path to optional structured LLM extraction behind the same service boundary.
+
+## Decision 15: Add Port Congestion As A Second Independent Paid Product
+
+MarineAgent now protects `GET /v1/ports/{port_code}/congestion` with the same official x402 middleware boundary used for ETA risk, but keeps the frontend purchase flow independent and manual-confirm only. This proves the product is a marketplace for multiple maritime intelligence products without coupling port congestion state to the ETA workflow or expanding whitelist complexity prematurely.

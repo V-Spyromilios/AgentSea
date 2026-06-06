@@ -2,14 +2,15 @@
 
 ## Purpose
 
-This runbook documents the real end-to-end Algorand TestNet x402 flow for AgentSea's paid ETA Risk endpoint:
+This runbook documents the real end-to-end Algorand TestNet x402 flow for MarineAgent's paid ETA Risk endpoint:
 
-- Start AgentSea with `X402_ENABLED=true`
+- Start MarineAgent with `X402_ENABLED=true`
 - Send an unpaid request to `GET /v1/vessels/{imo}/eta-risk`
 - Receive `HTTP 402 Payment Required`
 - Pay with an Algorand TestNet x402 client
 - Retry automatically with payment proof
 - Receive the normal ETA risk intelligence response
+- Confirm that port congestion is also a second independent x402-protected product
 
 The repo now supports two truthful demo paths that use the same funded TestNet payer:
 
@@ -41,7 +42,8 @@ X402_SYNC_FACILITATOR_ON_START=true
 ## Current Scope
 
 - Protected endpoint: `GET /v1/vessels/{imo}/eta-risk`
-- Unprotected endpoints: `/health`, vessel status, port congestion, departure verification
+- Unprotected endpoints: `/health`, vessel status, departure verification
+- Additional protected endpoint: `/v1/ports/{port_code}/congestion`
 - Payment stack: official `x402-avm[fastapi,avm]==2.0.2`
 - Network: Algorand TestNet
 - Asset for the real demo: TestNet USDC
@@ -52,8 +54,8 @@ The current official Algorand x402 flow uses TestNet USDC on Algorand. The known
 
 You need two Algorand TestNet accounts:
 
-- `payer`: the client account that pays for ETA risk requests
-- `receiver`: the AgentSea server account that receives payment and becomes `X402_AVM_ADDRESS`
+- `payer`: the client account that pays for ETA risk or port congestion requests
+- `receiver`: the MarineAgent server account that receives payment and becomes `X402_AVM_ADDRESS`
 
 Both accounts should have:
 
@@ -155,7 +157,7 @@ Follow the official Algorand x402 setup and fund both accounts. The payer is the
 
 ## Required Environment Variables
 
-AgentSea reads server configuration from `.env` through `app/core/config.py`. The Python payment client reads its values from exported shell variables, so load the same `.env` into your shell before running the client command:
+MarineAgent reads server configuration from `.env` through `app/core/config.py`. The Python payment client reads its values from exported shell variables, so load the same `.env` into your shell before running the client command:
 
 ```bash
 set -a
@@ -187,7 +189,7 @@ Demo-custody note:
 - this is acceptable only for a local hackathon demo
 - do not expose the key to the frontend, and do not reuse this backend-custody pattern as a production wallet design
 
-## Start AgentSea
+## Start MarineAgent
 
 From the repository root:
 
@@ -336,7 +338,7 @@ The backend then:
 
 1. loads `AVM_PRIVATE_KEY` server-side
 2. recreates the same x402 AVM signer flow used in the Python runbook
-3. retries the protected ETA risk request with real payment headers
+3. retries the protected resource request with real payment headers
 4. returns paid ETA intelligence only if the retried request actually returns `HTTP 200`
 
 If the response includes a transaction ID, verify it in Lora:
@@ -360,6 +362,7 @@ If the payer account has ALGO, USDC, and a USDC opt-in, and the hosted facilitat
 
 - `Status: 200`
 - The normal ETA risk intelligence response body
+- A second independent protected-product proof path for port congestion through the frontend demo payer endpoint
 
 Representative response:
 
@@ -402,4 +405,4 @@ Representative response:
 - Algorand TestNet funding: [https://dev.algorand.co/concepts/accounts/funding/](https://dev.algorand.co/concepts/accounts/funding/)
 - Circle faucet: [https://faucet.circle.com/](https://faucet.circle.com/)
 - Circle USDC addresses: [https://developers.circle.com/stablecoins/usdc-contract-addresses](https://developers.circle.com/stablecoins/usdc-contract-addresses)
-- Local AgentSea x402 resources: `skills/skills/algorand-agent-skills/` and `docs/HACKATHON_RESOURCES.md`
+- Local MarineAgent x402 resources: `skills/skills/algorand-agent-skills/` and `docs/HACKATHON_RESOURCES.md`

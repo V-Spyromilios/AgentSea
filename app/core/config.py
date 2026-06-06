@@ -11,6 +11,9 @@ LOCAL_DEV_AVM_ADDRESS = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5H
 LOCAL_DEMO_RESOURCE_URL = (
     "http://127.0.0.1:8000/v1/vessels/9321483/eta-risk?promised_eta=2026-06-09"
 )
+LOCAL_DEMO_PORT_CONGESTION_RESOURCE_URL = (
+    "http://127.0.0.1:8000/v1/ports/DEHAM/congestion"
+)
 
 
 class Settings(BaseSettings):
@@ -48,6 +51,10 @@ class Settings(BaseSettings):
     x402_eta_risk_price_usd: str = Field(
         default="0.02",
         alias="X402_ETA_RISK_PRICE_USD",
+    )
+    x402_port_congestion_price_usd: str = Field(
+        default="0.02",
+        alias="X402_PORT_CONGESTION_PRICE_USD",
     )
     x402_sync_facilitator_on_start: bool = Field(
         default=False,

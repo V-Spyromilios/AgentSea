@@ -15,6 +15,7 @@ class X402Settings(BaseModel):
     facilitator_url: str = "https://facilitator.goplausible.xyz"
     network: str = ALGORAND_TESTNET_CAIP2
     eta_risk_price_usd: str = "0.02"
+    port_congestion_price_usd: str = "0.02"
     sync_facilitator_on_start: bool = False
 
     @property
@@ -33,6 +34,22 @@ class X402Settings(BaseModel):
     def eta_risk_price_expression(self) -> str:
         return f"${self.eta_risk_price_usd}"
 
+    @property
+    def port_congestion_route_pattern(self) -> str:
+        return "GET /v1/ports/[port_code]/congestion"
+
+    @property
+    def port_congestion_price(self) -> ProductPrice:
+        return ProductPrice(
+            asset="USDC",
+            amount=self.port_congestion_price_usd,
+            network=self.network,
+        )
+
+    @property
+    def port_congestion_price_expression(self) -> str:
+        return f"${self.port_congestion_price_usd}"
+
 
 def get_x402_settings() -> X402Settings:
     settings = get_settings()
@@ -42,5 +59,6 @@ def get_x402_settings() -> X402Settings:
         facilitator_url=settings.x402_facilitator_url,
         network=settings.x402_network,
         eta_risk_price_usd=settings.x402_eta_risk_price_usd,
+        port_congestion_price_usd=settings.x402_port_congestion_price_usd,
         sync_facilitator_on_start=settings.x402_sync_facilitator_on_start,
     )

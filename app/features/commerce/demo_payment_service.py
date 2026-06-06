@@ -17,10 +17,13 @@ from x402.mechanisms.avm import ALGORAND_TESTNET_CAIP2, USDC_TESTNET_ASA_ID
 from x402.mechanisms.avm.exact.register import register_exact_avm_client
 from x402.schemas import PaymentRequired
 
-from app.core.config import get_settings
+from app.core.config import (
+    LOCAL_DEMO_PORT_CONGESTION_RESOURCE_URL,
+    get_settings,
+)
 from app.features.commerce.schemas import (
-    DemoPayEtaRiskRequest,
-    DemoPayEtaRiskResponse,
+    DemoPaymentRequest,
+    DemoPaymentResponse,
     DemoPaymentDebugEvidence,
     DemoPaymentEvidence,
 )
@@ -28,6 +31,7 @@ from app.features.commerce.x402_config import X402Settings, get_x402_settings
 
 
 ETA_RISK_DEMO_PATH = "/v1/vessels/9321483/eta-risk"
+PORT_CONGESTION_DEMO_PATH = "/v1/ports/DEHAM/congestion"
 TESTNET_LORA_TRANSACTION_URL = "https://lora.algokit.io/testnet/transaction"
 HEADER_PREVIEW_LENGTH = 120
 logger = logging.getLogger(__name__)
@@ -75,8 +79,37 @@ class AlgorandSigner:
 class DemoPaymentExecutor:
     async def pay_eta_risk(
         self,
-        request: DemoPayEtaRiskRequest,
-    ) -> DemoPayEtaRiskResponse:
+        request: DemoPaymentRequest,
+    ) -> DemoPaymentResponse:
+        settings = get_settings()
+        return await self._pay_protected_product(
+            request=request,
+            expected_url=settings.resource_url,
+            expected_path=ETA_RISK_DEMO_PATH,
+            require_promised_eta=True,
+            default_price_amount=get_x402_settings().eta_risk_price_usd,
+        )
+
+    async def pay_port_congestion(
+        self,
+        request: DemoPaymentRequest,
+    ) -> DemoPaymentResponse:
+        return await self._pay_protected_product(
+            request=request,
+            expected_url=LOCAL_DEMO_PORT_CONGESTION_RESOURCE_URL,
+            expected_path=PORT_CONGESTION_DEMO_PATH,
+            require_promised_eta=False,
+            default_price_amount=get_x402_settings().port_congestion_price_usd,
+        )
+
+    async def _pay_protected_product(
+        self,
+        request: DemoPaymentRequest,
+        expected_url: str,
+        expected_path: str,
+        require_promised_eta: bool,
+        default_price_amount: str,
+    ) -> DemoPaymentResponse:
         settings = get_settings()
         x402_settings = get_x402_settings()
 
@@ -89,7 +122,12 @@ class DemoPaymentExecutor:
             )
 
         resource_url = str(request.resource_url)
-        self._validate_resource_url(resource_url, settings.resource_url)
+        self._validate_resource_url(
+            resource_url=resource_url,
+            expected_url=expected_url,
+            expected_path=expected_path,
+            require_promised_eta=require_promised_eta,
+        )
 
         payer = self._load_demo_payer(settings.avm_private_key)
 
@@ -104,25 +142,30 @@ class DemoPaymentExecutor:
                 resource_url=resource_url,
                 payer=payer,
                 x402_settings=x402_settings,
+                default_price_amount=default_price_amount,
             )
         except Exception as exc:
-            return DemoPayEtaRiskResponse(
+            return DemoPaymentResponse(
                 paid=False,
                 status_code=500,
                 payer_address=payer.address,
                 resource_url=resource_url,
                 mode=request.mode,
                 error=self._sanitize_error_message(str(exc), payer.encoded_secret_key),
-                payment_evidence=self._default_payment_evidence(x402_settings),
+                payment_evidence=self._default_payment_evidence(
+                    x402_settings,
+                    default_price_amount,
+                ),
             )
 
     async def _perform_payment_request(
         self,
-        request: DemoPayEtaRiskRequest,
+        request: DemoPaymentRequest,
         resource_url: str,
         payer: DemoPayer,
         x402_settings: X402Settings,
-    ) -> DemoPayEtaRiskResponse:
+        default_price_amount: str,
+    ) -> DemoPaymentResponse:
         signer = AlgorandSigner(payer.secret_key, payer.address)
         x402 = x402Client()
         register_exact_avm_client(x402, signer, networks=x402_settings.network)
@@ -148,7 +191,7 @@ class DemoPaymentExecutor:
             )
 
             if initial_response.status_code != 402:
-                return DemoPayEtaRiskResponse(
+                return DemoPaymentResponse(
                     paid=False,
                     status_code=initial_response.status_code,
                     payer_address=payer.address,
@@ -158,7 +201,10 @@ class DemoPaymentExecutor:
                         "Expected a real HTTP 402 payment checkpoint before demo payment, "
                         f"but received HTTP {initial_response.status_code}."
                     ),
-                    payment_evidence=self._default_payment_evidence(x402_settings),
+                    payment_evidence=self._default_payment_evidence(
+                        x402_settings,
+                        default_price_amount,
+                    ),
                     debug_evidence=DemoPaymentDebugEvidence(
                         retry_status_code=initial_response.status_code,
                         retry_body=self._sanitize_retry_text(
@@ -170,14 +216,17 @@ class DemoPaymentExecutor:
 
             raw_payment_required = initial_response.headers.get(PAYMENT_REQUIRED_HEADER)
             if not raw_payment_required:
-                return DemoPayEtaRiskResponse(
+                return DemoPaymentResponse(
                     paid=False,
                     status_code=402,
                     payer_address=payer.address,
                     resource_url=resource_url,
                     mode=request.mode,
                     error="PAYMENT-REQUIRED header was missing from the HTTP 402 response.",
-                    payment_evidence=self._default_payment_evidence(x402_settings),
+                    payment_evidence=self._default_payment_evidence(
+                        x402_settings,
+                        default_price_amount,
+                    ),
                     debug_evidence=DemoPaymentDebugEvidence(
                         retry_status_code=402,
                         retry_body=self._sanitize_retry_text(
@@ -203,7 +252,7 @@ class DemoPaymentExecutor:
                     initial_body,
                 )
             except Exception as exc:
-                return DemoPayEtaRiskResponse(
+                return DemoPaymentResponse(
                     paid=False,
                     status_code=402,
                     payer_address=payer.address,
@@ -264,7 +313,7 @@ class DemoPaymentExecutor:
             )
 
             if retry_response.status_code != 200:
-                return DemoPayEtaRiskResponse(
+                return DemoPaymentResponse(
                     paid=False,
                     status_code=retry_response.status_code,
                     payer_address=payer.address,
@@ -275,7 +324,7 @@ class DemoPaymentExecutor:
                     debug_evidence=debug_evidence,
                 )
 
-            return DemoPayEtaRiskResponse(
+            return DemoPaymentResponse(
                 paid=True,
                 status_code=200,
                 payer_address=payer.address,
@@ -298,7 +347,13 @@ class DemoPaymentExecutor:
             encoded_secret_key=encoded_secret_key,
         )
 
-    def _validate_resource_url(self, resource_url: str, expected_url: str) -> None:
+    def _validate_resource_url(
+        self,
+        resource_url: str,
+        expected_url: str,
+        expected_path: str,
+        require_promised_eta: bool,
+    ) -> None:
         parsed = urlparse(resource_url)
         expected = urlparse(expected_url)
 
@@ -308,8 +363,8 @@ class DemoPaymentExecutor:
         if parsed.hostname not in {"127.0.0.1", "localhost"}:
             raise ValueError("resource_url must point to the local MarineAgent demo backend.")
 
-        if parsed.path != ETA_RISK_DEMO_PATH:
-            raise ValueError("resource_url must target the protected ETA risk demo path.")
+        if parsed.path != expected_path:
+            raise ValueError("resource_url must target the expected protected demo path.")
 
         if expected.hostname not in {"127.0.0.1", "localhost"}:
             raise ValueError("Configured RESOURCE_URL must remain local for the demo payer.")
@@ -317,15 +372,16 @@ class DemoPaymentExecutor:
         expected_query = parse_qs(expected.query)
         parsed_query = parse_qs(parsed.query)
 
-        if "promised_eta" not in parsed_query or not parsed_query["promised_eta"][0]:
-            raise ValueError(
-                "resource_url must include a promised_eta query parameter."
-            )
+        if require_promised_eta:
+            if "promised_eta" not in parsed_query or not parsed_query["promised_eta"][0]:
+                raise ValueError(
+                    "resource_url must include a promised_eta query parameter."
+                )
 
-        if "promised_eta" not in expected_query:
-            raise ValueError(
-                "Configured RESOURCE_URL must include a promised_eta query parameter."
-            )
+            if "promised_eta" not in expected_query:
+                raise ValueError(
+                    "Configured RESOURCE_URL must include a promised_eta query parameter."
+                )
 
     def _build_payment_evidence(
         self,
@@ -361,11 +417,15 @@ class DemoPaymentExecutor:
             note=note,
         )
 
-    def _default_payment_evidence(self, x402_settings: X402Settings) -> DemoPaymentEvidence:
+    def _default_payment_evidence(
+        self,
+        x402_settings: X402Settings,
+        default_price_amount: str,
+    ) -> DemoPaymentEvidence:
         return DemoPaymentEvidence(
             network=self._network_label(x402_settings.network, None),
             asset_id=str(USDC_TESTNET_ASA_ID),
-            amount=x402_settings.eta_risk_price_usd,
+            amount=default_price_amount,
             asset_label=self._asset_label(str(USDC_TESTNET_ASA_ID)),
         )
 

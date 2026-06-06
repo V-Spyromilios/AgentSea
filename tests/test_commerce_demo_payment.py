@@ -4,9 +4,12 @@ import json
 
 import httpx
 
-from app.core.config import LOCAL_DEMO_RESOURCE_URL
+from app.core.config import (
+    LOCAL_DEMO_PORT_CONGESTION_RESOURCE_URL,
+    LOCAL_DEMO_RESOURCE_URL,
+)
 from app.features.commerce.demo_payment_service import DemoPaymentExecutor
-from app.features.commerce.schemas import DemoPayEtaRiskResponse, DemoPaymentEvidence
+from app.features.commerce.schemas import DemoPaymentEvidence, DemoPaymentResponse
 from app.features.commerce.x402_config import X402Settings
 from x402.http.constants import PAYMENT_REQUIRED_HEADER, PAYMENT_RESPONSE_HEADER
 from x402.mechanisms.avm import ALGORAND_TESTNET_CAIP2
@@ -56,7 +59,7 @@ def test_demo_payment_failure_does_not_expose_private_key(
 ) -> None:
     secret = "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQ=="
 
-    async def fake_perform_payment_request(self, request, resource_url, payer, x402_settings):  # type: ignore[no-untyped-def]
+    async def fake_perform_payment_request(self, request, resource_url, payer, x402_settings, default_price_amount):  # type: ignore[no-untyped-def]
         raise RuntimeError(f"payment failed for {payer.address} using {secret}")
 
     monkeypatch.setattr(
@@ -91,8 +94,8 @@ def test_demo_payment_returns_paid_false_when_payment_fails(
     app_client_factory,
     monkeypatch,
 ) -> None:
-    async def fake_perform_payment_request(self, request, resource_url, payer, x402_settings):  # type: ignore[no-untyped-def]
-        return DemoPayEtaRiskResponse(
+    async def fake_perform_payment_request(self, request, resource_url, payer, x402_settings, default_price_amount):  # type: ignore[no-untyped-def]
+        return DemoPaymentResponse(
             paid=False,
             status_code=402,
             payer_address=payer.address,
@@ -139,8 +142,8 @@ def test_demo_payment_returns_paid_true_only_when_payment_succeeds(
     app_client_factory,
     monkeypatch,
 ) -> None:
-    async def fake_perform_payment_request(self, request, resource_url, payer, x402_settings):  # type: ignore[no-untyped-def]
-        return DemoPayEtaRiskResponse(
+    async def fake_perform_payment_request(self, request, resource_url, payer, x402_settings, default_price_amount):  # type: ignore[no-untyped-def]
+        return DemoPaymentResponse(
             paid=True,
             status_code=200,
             payer_address=payer.address,
@@ -187,6 +190,106 @@ def test_demo_payment_returns_paid_true_only_when_payment_succeeds(
     assert body["status_code"] == 200
     assert body["intelligence"]["product"] == "eta-risk"
     assert body["payment_evidence"]["transaction_id"] == "MOCKTXID123"
+
+
+def test_demo_port_congestion_returns_paid_false_when_payment_fails(
+    app_client_factory,
+    monkeypatch,
+) -> None:
+    async def fake_perform_payment_request(self, request, resource_url, payer, x402_settings, default_price_amount):  # type: ignore[no-untyped-def]
+        return DemoPaymentResponse(
+            paid=False,
+            status_code=402,
+            payer_address=payer.address,
+            resource_url=resource_url,
+            mode=request.mode,
+            error="port congestion payment retry returned HTTP 402",
+            payment_evidence=DemoPaymentEvidence(
+                network="Algorand TestNet",
+                asset_id="10458941",
+                amount="0.02",
+                asset_label="TestNet USDC",
+            ),
+        )
+
+    monkeypatch.setattr(
+        DemoPaymentExecutor,
+        "_perform_payment_request",
+        fake_perform_payment_request,
+    )
+
+    client = app_client_factory(
+        X402_ENABLED="true",
+        AVM_PRIVATE_KEY="QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQ==",
+    )
+
+    response = client.post(
+        "/v1/commerce/demo/pay-port-congestion",
+        json={
+            "resource_url": LOCAL_DEMO_PORT_CONGESTION_RESOURCE_URL,
+            "mode": "manual_confirm",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["paid"] is False
+    assert body["status_code"] == 402
+    assert body["intelligence"] is None
+    assert body["payment_evidence"]["asset_id"] == "10458941"
+
+
+def test_demo_port_congestion_returns_paid_true_only_when_payment_succeeds(
+    app_client_factory,
+    monkeypatch,
+) -> None:
+    async def fake_perform_payment_request(self, request, resource_url, payer, x402_settings, default_price_amount):  # type: ignore[no-untyped-def]
+        return DemoPaymentResponse(
+            paid=True,
+            status_code=200,
+            payer_address=payer.address,
+            resource_url=resource_url,
+            mode=request.mode,
+            intelligence={
+                "product": "port-congestion",
+                "port_code": "DEHAM",
+                "congestion_level": "high",
+            },
+            payment_evidence=DemoPaymentEvidence(
+                network="Algorand TestNet",
+                asset_id="10458941",
+                amount="0.02",
+                asset_label="TestNet USDC",
+                transaction_id="MOCKPORTTXID123",
+                lora_url="https://lora.algokit.io/testnet/transaction/MOCKPORTTXID123",
+            ),
+        )
+
+    monkeypatch.setattr(
+        DemoPaymentExecutor,
+        "_perform_payment_request",
+        fake_perform_payment_request,
+    )
+
+    client = app_client_factory(
+        X402_ENABLED="true",
+        AVM_PRIVATE_KEY="QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQQ==",
+    )
+
+    response = client.post(
+        "/v1/commerce/demo/pay-port-congestion",
+        json={
+            "resource_url": LOCAL_DEMO_PORT_CONGESTION_RESOURCE_URL,
+            "mode": "manual_confirm",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["paid"] is True
+    assert body["status_code"] == 200
+    assert body["intelligence"]["product"] == "port-congestion"
+    assert body["payment_evidence"]["transaction_id"] == "MOCKPORTTXID123"
 
 
 def test_demo_payment_retry_402_returns_debug_evidence(monkeypatch) -> None:
@@ -296,6 +399,7 @@ def test_demo_payment_retry_402_returns_debug_evidence(monkeypatch) -> None:
             resource_url=LOCAL_DEMO_RESOURCE_URL,
             payer=payer,
             x402_settings=X402Settings(enabled=True),
+            default_price_amount="0.02",
         )
     )
 
