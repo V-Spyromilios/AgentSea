@@ -573,7 +573,6 @@ function App() {
   const [isWhitelisted, setIsWhitelisted] = useState<boolean>(() =>
     loadWhitelistPreference(),
   );
-  const [autoPayMessage, setAutoPayMessage] = useState<string | null>(null);
   const [draftState, setDraftState] = useState<DraftActionState>({ kind: "idle" });
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
   const [manualEvidence, setManualEvidence] = useState<ManualEvidence>({
@@ -650,7 +649,6 @@ function App() {
     >,
     mode: PaymentMode,
   ) {
-    setAutoPayMessage(null);
     setState({
       kind: "paying",
       statusCode: checkpoint.statusCode,
@@ -765,7 +763,6 @@ function App() {
   }
 
   async function handleBuyIntelligence() {
-    setAutoPayMessage(null);
     setManualEvidence((current) => ({
       ...current,
       paymentErrorMessage: "",
@@ -798,13 +795,9 @@ function App() {
             etaRiskUrl,
           );
           if (!policyCheck.allowed) {
-            setAutoPayMessage(policyCheck.reason);
             return;
           }
 
-          setAutoPayMessage(
-            "MarineAgent is whitelisted. Attempting auto-confirmed x402 payment for this exact requirement.",
-          );
           await attemptDemoPayment(unpaidState, "whitelist_auto_pay");
         }
         return;
@@ -840,14 +833,10 @@ function App() {
 
   function handleWhitelistEnable() {
     setIsWhitelisted(true);
-    setAutoPayMessage(
-      "MarineAgent whitelisted by Hamburg Cargo agent. Future ETA risk requests can auto-confirm x402 payments when the payment requirement matches the demo policy.",
-    );
   }
 
   function handleWhitelistDisable() {
     setIsWhitelisted(false);
-    setAutoPayMessage("MarineAgent whitelist removed for this browser session.");
   }
 
   function handleExporterFieldChange(
@@ -1191,7 +1180,6 @@ function App() {
   }
 
   function resetDownstreamState() {
-    setAutoPayMessage(null);
     setState({ kind: "idle" });
     setManualEvidence({
       payerAddress: "",
@@ -1326,8 +1314,9 @@ function App() {
           </div>
           <h2>Request ETA Risk Intelligence</h2>
           <p className="muted">
-            This button calls the live backend endpoint and shows either the real
-            ETA response or the real x402 paywall state.
+            {isWhitelisted
+              ? "Matching x402 requests auto-pay."
+              : "Agent asks before paying."}
           </p>
           <button
             className="primary-button"
@@ -1336,37 +1325,18 @@ function App() {
           >
             {state.kind === "loading"
               ? "Requesting MarineAgent intelligence..."
-              : "Request ETA Risk Intelligence"}
+              : "Request ETA & Risk"}
           </button>
-          {!hasExtractedClaim && (
-            <p className="muted">Extract supplier claim first.</p>
-          )}
           <div className="whitelist-panel">
-            {!isWhitelisted ? (
+            <div className="mode-panel">
               <button
-                className="secondary-button whitelist-button"
-                onClick={handleWhitelistEnable}
+                className={`mode-button ${isWhitelisted ? "active trusted" : "approval"}`}
+                onClick={isWhitelisted ? handleWhitelistDisable : handleWhitelistEnable}
                 type="button"
               >
-                Whitelist MarineAgent for automatic x402 payments
+                {isWhitelisted ? "Require Approval" : "Trust & auto-pay"}
               </button>
-            ) : (
-              <>
-                <p className="highlight">
-                  MarineAgent whitelisted by Hamburg Cargo agent. Future ETA risk
-                  requests can auto-confirm x402 payments.
-                </p>
-                <button
-                  className="ghost-button"
-                  onClick={handleWhitelistDisable}
-                  type="button"
-                >
-                  Remove whitelist
-                </button>
-              </>
-            )}
-            
-            {autoPayMessage && <p className="muted">{autoPayMessage}</p>}
+            </div>
           </div>
           <div className="request-meta">
             <span className="request-label">Live backend endpoint</span>
