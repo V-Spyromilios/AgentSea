@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from x402.http.constants import PAYMENT_REQUIRED_HEADER, PAYMENT_RESPONSE_HEADER
 
 from app.core.config import get_settings
 from app.core.errors import register_exception_handlers
@@ -19,6 +21,11 @@ ROOT_EXAMPLE = {
     "algorand_ready": True,
 }
 
+FRONTEND_DEV_ORIGINS = [
+    "http://127.0.0.1:5173",
+    "http://localhost:5173",
+]
+
 
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -31,6 +38,15 @@ def create_app() -> FastAPI:
             "This milestone provides mock intelligence products, a swappable AIS provider "
             "abstraction, and an x402 payment enforcement boundary for ETA risk on Algorand."
         ),
+    )
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=FRONTEND_DEV_ORIGINS,
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=[PAYMENT_REQUIRED_HEADER, PAYMENT_RESPONSE_HEADER],
     )
 
     register_exception_handlers(app)

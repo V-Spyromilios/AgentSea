@@ -4,6 +4,8 @@ AgentSea is an agent-first maritime intelligence API built for the Algorand x402
 
 It is designed around a simple idea: maritime intelligence is the product. Raw AIS data is only an ingredient.
 
+The repo now also includes a small Hamburg Cargo frontend demo in `frontend/` for pitch-day storytelling.
+
 ## What This Milestone Includes
 
 - FastAPI backend foundation
@@ -27,6 +29,8 @@ The project uses vertical slice architecture under `app/features/`.
 - `commerce/` contains pricing, x402 configuration, and the ETA risk payment boundary
 
 Business logic lives in services. Routers stay thin.
+
+For demo polish, `frontend/` contains a thin Vite + React + TypeScript single-page experience that calls the existing ETA risk endpoint without changing backend business logic.
 
 ## x402 Configuration
 
@@ -117,6 +121,37 @@ With x402 enabled:
 - The response includes a `PAYMENT-REQUIRED` header with the x402 requirements.
 - Retried requests with a valid `PAYMENT-SIGNATURE` continue to the existing ETA risk service.
 - Other endpoints remain unpaid.
+
+## Frontend Demo
+
+The Hamburg Cargo pitch demo lives in `frontend/`.
+
+Create the frontend env file:
+
+```bash
+cp frontend/.env.example frontend/.env
+```
+
+Then run the frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The page will open on Vite's local dev server and call the ETA risk backend using:
+
+```bash
+VITE_AGENTSEA_API_BASE_URL=http://127.0.0.1:8000
+```
+
+Demo flow:
+
+- The frontend makes a real request to `GET /v1/vessels/9321483/eta-risk?promised_eta=2026-06-09`
+- If the backend returns `402`, the UI shows a real paywall state and decoded `PAYMENT-REQUIRED` header evidence
+- A separate demo-only button can reveal a clearly labelled preview of the paid intelligence for pitch purposes
+- That demo button does not perform payment verification and does not change backend x402 behavior
 
 ## Testing
 

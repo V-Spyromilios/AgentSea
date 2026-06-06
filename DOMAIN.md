@@ -8,6 +8,8 @@ AgentSea is an agent-first maritime intelligence API. It sells business-ready ju
 
 Hamburg Cargo is the first demo customer. Its AI operations agent buys maritime intelligence from AgentSea to monitor import and export shipments.
 
+The demo frontend visualizes Hamburg Cargo's AI operations agent requesting ETA risk intelligence, encountering an x402 paywall, and then showing a clearly labelled pitch-only preview while live payment is still pending.
+
 ## AIS
 
 AIS means Automatic Identification System. It is a vessel tracking signal source. In AgentSea, AIS is an input to reasoning, not the final product.

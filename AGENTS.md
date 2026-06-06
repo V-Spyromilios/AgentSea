@@ -7,6 +7,7 @@ AgentSea is an agent-first maritime intelligence API. The product is structured 
 ## Architecture Rules
 
 - Keep the backend Python-only and FastAPI-first.
+- Keep the demo frontend isolated in `frontend/` as a thin presentation layer.
 - Use vertical slice architecture under `app/features/`.
 - Keep routers thin and place business logic in `service.py`.
 - Shared contracts belong in `app/shared/`; global concerns belong in `app/core/`.
@@ -34,6 +35,13 @@ AgentSea is an agent-first maritime intelligence API. The product is structured 
 - Milestone 2 protects only `GET /v1/vessels/{imo}/eta-risk` with x402.
 - Do not protect other intelligence routes unless the milestone explicitly expands scope.
 - Keep x402, facilitator, and Algorand logic isolated in the commerce feature.
+
+## Frontend Demo Rules
+
+- The frontend exists only for demo storytelling and must remain small and easy to replace.
+- Do not fake payment verification in the frontend.
+- If a demo-only unlock is shown, label it clearly as not being a real blockchain payment.
+- Do not move maritime intelligence or x402 business logic into the frontend.
 
 ## Documentation Maintenance Rules
 

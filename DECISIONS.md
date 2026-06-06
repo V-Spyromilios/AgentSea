@@ -39,3 +39,7 @@ The first real end-to-end AgentSea x402 demo should follow the official Algorand
 ## Decision 10: Centralize Environment Loading In app/core/config.py
 
 Application configuration is now loaded from one place through Pydantic settings with `.env` support. Commerce code reads typed config objects instead of calling `os.getenv()` directly, which improves local developer setup and keeps TestNet demo configuration consistent across the app and documentation.
+
+## Decision 11: Keep The Frontend Demo Thin And Honest
+
+The Hamburg Cargo frontend is a small single-page Vite/React demo layered on top of the existing backend. It may show a clearly labelled demo-only unlocked intelligence preview after a real `402` response, but it must not fake payment verification or imply that a browser click completed an Algorand settlement.

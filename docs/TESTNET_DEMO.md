@@ -211,6 +211,9 @@ import asyncio
 import base64
 import os
 
+from dotenv import load_dotenv
+
+load_dotenv(".env", override=True)
 import algosdk
 from x402 import x402Client
 from x402.http import x402HTTPClient
@@ -272,6 +275,12 @@ async def main() -> None:
 
         print(f"Status: {response.status_code}")
         print(f"Body: {response.text}")
+
+        print("Status:", response.status_code)
+        print("Headers:")
+        for k, v in response.headers.items():
+            print(k, ":", v)
+        print("Body:", response.text)
 
         if response.is_success:
             settle_client = x402HTTPClient(x402)

@@ -25,6 +25,8 @@ def app_client_factory(monkeypatch: pytest.MonkeyPatch) -> Callable[..., TestCli
         for key in X402_ENV_KEYS:
             monkeypatch.delenv(key, raising=False)
 
+        monkeypatch.setenv("X402_ENABLED", "false")
+
         for key, value in env_overrides.items():
             monkeypatch.setenv(key, str(value))
 
